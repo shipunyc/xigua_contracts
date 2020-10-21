@@ -1,0 +1,155 @@
+{
+    "lang": "javascript",
+    "version": "1.0.0",
+    "abi": [
+        {
+            "name": "can_update",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "setFeeTo",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "setOracle",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "setLiebi",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "setMinRatio",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "setMaxRatio",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "getInfo",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "getLiquidation",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "lock",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [{
+                "token": "iost",
+                "val": "unlimited"
+            }],
+            "description": ""
+        },
+        {
+            "name": "unlockWithDelay",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [{
+                "token": "vost",
+                "val": "unlimited"
+            }],
+            "description": ""
+        },
+        {
+            "name": "unlockImmediately",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [{
+                "token": "vost",
+                "val": "unlimited"
+            }],
+            "description": ""
+        },
+        {
+            "name": "borrow",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "payBack",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [{
+                "token": "xusd",
+                "val": "unlimited"
+            }],
+            "description": ""
+        },
+        {
+            "name": "startLiquidation",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [{
+                "token": "xusd",
+                "val": "unlimited"
+            }],
+            "description": ""
+        },
+        {
+            "name": "finishLiquidation",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "cancelLiquidation",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "skim",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        }
+    ]
+}
