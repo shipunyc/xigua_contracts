@@ -17,6 +17,9 @@ tid => number
 3 independent bots reports prices of the 3 exchanges independently,
 and we take the 2 with the minimum diffs as the oracle price.
 
+Currently okex bot is not in use yet because of:
+https://www.coindesk.com/okex-suspends-withdrawals
+
 */
 
 const PRICE_PRECISION = 6;
@@ -28,13 +31,39 @@ class Oracle {
   }
 
   can_update(data) {
-    return blockchain.requireAuth(blockchain.contractOwner(), "active");
+    return blockchain.requireAuth(blockchain.contractOwner(), "active") && !this.isLocked();
+  }
+
+  _requireOwner() {
+    if(!blockchain.requireAuth(blockchain.contractOwner(), 'active')){
+      throw 'require auth error:not contractOwner';
+    }
+  }
+
+  isLocked() {
+    const now = Math.floor(tx.time / 1e9);
+    const status = +storage.get("timeLockStatus") || 0;
+    const until = +storage.get("timeLockUntil") || 0;
+    return status == 0 && now > until;
+  }
+
+  startTimeLock() {
+    this._requireOwner();
+
+    storage.put("timeLockStatus", "1");
+  }
+
+  stopTimeLock() {
+    this._requireOwner();
+
+    const now = Math.floor(tx.time / 1e9);
+
+    storage.put("timeLockUntil", (now + TIME_LOCK_DURATION).toString());
+    storage.put("timeLockStatus", "0")
   }
 
   setBot(exchange, bot) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
+    this._requireOwner();
 
     if (['binance', 'huobi', 'okex'].indexOf(exchange) < 0) {
       throw "exchange not supported";
@@ -49,7 +78,7 @@ class Oracle {
 
   setPrice(exchange, price) {
     const bot = this._getBot(exchange);
-    if (tx.publisher != bot) {
+    if (!blockchain.requireAuth(bot, "active")) {
       throw "invalid bot";
     }
 

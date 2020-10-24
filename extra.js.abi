@@ -29,34 +29,7 @@
             "description": ""
         },
         {
-            "name": "setBot",
-            "args": [
-                "string",
-                "string"
-            ],
-            "amountLimit": [],
-            "description": ""
-        },
-        {
-            "name": "setPrice",
-            "args": [
-                "string",
-                "string"
-            ],
-            "amountLimit": [],
-            "description": ""
-        },
-        {
-            "name": "getPrice",
-            "args": [
-                "string",
-                "string"
-            ],
-            "amountLimit": [],
-            "description": ""
-        },
-        {
-            "name": "getGoodPrice",
+            "name": "setRouter",
             "args": [
                 "string"
             ],
@@ -64,10 +37,16 @@
             "description": ""
         },
         {
-            "name": "getAverageGoodPrice",
+            "name": "setFarm",
             "args": [
                 "string"
             ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "takeExtra",
+            "args": [],
             "amountLimit": [],
             "description": ""
         }

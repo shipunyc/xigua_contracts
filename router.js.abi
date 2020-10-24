@@ -11,6 +11,24 @@
             "description": ""
         },
         {
+            "name": "isLocked",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "startTimeLock",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "stopTimeLock",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
             "name": "setSwap",
             "args": [
                 "string"

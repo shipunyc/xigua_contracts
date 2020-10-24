@@ -34,7 +34,41 @@ class Bank {
   }
 
   can_update(data) {
-    return blockchain.requireAuth(blockchain.contractOwner(), "active");
+    return blockchain.requireAuth(blockchain.contractOwner(), "active") && !this.isLocked();
+  }
+
+  _requireOwner() {
+    if (!blockchain.requireAuth(blockchain.contractOwner(), 'active')){
+      throw 'require auth error:not contractOwner';
+    }
+  }
+
+  isLocked() {
+    const now = Math.floor(tx.time / 1e9);
+    const status = +storage.get("timeLockStatus") || 0;
+    const until = +storage.get("timeLockUntil") || 0;
+    return status == 0 && now > until;
+  }
+
+  _requireUnlocked() {
+    if (this.isLocked()) {
+      throw "Xigua: IS_LOCKED";
+    }
+  }
+
+  startTimeLock() {
+    this._requireOwner();
+
+    storage.put("timeLockStatus", "1");
+  }
+
+  stopTimeLock() {
+    this._requireOwner();
+
+    const now = Math.floor(tx.time / 1e9);
+
+    storage.put("timeLockUntil", (now + TIME_LOCK_DURATION).toString());
+    storage.put("timeLockStatus", "0")
   }
 
   /*
@@ -54,11 +88,19 @@ class Bank {
   }
   */
 
-  setFeeTo(feeTo) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
-    
+  setExtra(extra) {
+    this._requireOwner();
+
+    storage.put("extra", extra);
+  }
+
+  _getExtra() {
+    return storage.get("extra") || '';
+  }
+
+  setExtra(feeTo) {
+    this._requireOwner();
+
     storage.put("feeTo", feeTo);
   }
 
@@ -67,9 +109,8 @@ class Bank {
   }
 
   setOracle(oracle) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
+    this._requireOwner();
+    this._requireUnlocked();
 
     storage.put("oracle", oracle);
   }
@@ -79,9 +120,8 @@ class Bank {
   }
 
   setLiebi(liebi) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
+    this._requireOwner();
+    this._requireUnlocked();
 
     storage.put("liebi", liebi);
   }
@@ -91,9 +131,8 @@ class Bank {
   }
 
   setMinRatio(minRatio) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
+    this._requireOwner();
+    this._requireUnlocked();
 
     storage.put("minRatio", minRatio.toString());
   }
@@ -103,9 +142,8 @@ class Bank {
   }
 
   setMaxRatio(maxRatio) {
-   if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
+    this._requireOwner();
+    this._requireUnlocked();
 
     storage.put("maxRatio", maxRatio.toString());
   }
@@ -133,13 +171,13 @@ class Bank {
   _plusVOSTBalance(delta) {
     var balance = new BigNumber(storage.get("vostBalance") || "0");
     balance = balance.plus(delta);
-    storage.put("vostBalance", balance.toFixed(VOST_PRECISION));
+    storage.put("vostBalance", balance.toFixed(VOST_PRECISION, ROUND_DOWN));
   }
 
   _minusVOSTBalance(delta) {
     var balance = new BigNumber(storage.get("vostBalance") || "0");
     balance = balance.minus(delta);
-    storage.put("vostBalance", balance.toFixed(VOST_PRECISION));
+    storage.put("vostBalance", balance.toFixed(VOST_PRECISION, ROUND_DOWN));
   }
 
   _getVOSTBalance() {
@@ -406,9 +444,7 @@ class Bank {
   }
 
   cancelLiquidation(hash) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can cancel";
-    }
+    this._requireOwner();
 
     const liquidation = this.getLiquidation(hash);
 
@@ -439,17 +475,27 @@ class Bank {
         info.borrowed]));
   }
 
-  // force vost balance to match real balance
+  // force vost balance to match real balance, by doing this we send vost to extra and feeTo (burner).
   skim() {
     const balance = this._getVOSTBalance();
     const realBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
 
     if (realBalance.gt(balance)) {
+      const extraAmount = realBalance.minus(balance).times(0.9);
+      const feeAmount = realBalance.minus(balance).times(0.1);
+
+      blockchain.callWithAuth("token.iost", "transfer",
+          ["vost",
+           blockchain.contractName(),
+           this._getExtra() || tx.publisher,
+           extraAmount.toFixed(VOST_PRECISION, ROUND_DOWN),
+           "skim"]);
+
       blockchain.callWithAuth("token.iost", "transfer",
           ["vost",
            blockchain.contractName(),
            this._getFeeTo() || tx.publisher,
-           realBalance.minus(balance).toFixed(VOST_PRECISION),
+           feeAmount.toFixed(VOST_PRECISION, ROUND_DOWN),
            "skim"]);
     }
   }

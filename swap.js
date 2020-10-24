@@ -35,19 +35,49 @@ const UNIVERSAL_PRECISION = 8;
 const MINIMUM_LIQUIDITY = 0.00001;
 const UNIT_LIQUIDITY = 0.00000001;
 
+const ROUND_DOWN = 1;
+
+const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
+
 class Swap {
 
   init() {
   }
 
   can_update(data) {
-    return blockchain.requireAuth(blockchain.contractOwner(), "active");
+    return blockchain.requireAuth(blockchain.contractOwner(), "active") && !this.isLocked();
+  }
+
+  _requireOwner() {
+    if(!blockchain.requireAuth(blockchain.contractOwner(), 'active')){
+      throw 'require auth error:not contractOwner';
+    }
+  }
+
+  isLocked() {
+    const now = Math.floor(tx.time / 1e9);
+    const status = +storage.get("timeLockStatus") || 0;
+    const until = +storage.get("timeLockUntil") || 0;
+    return status == 0 && now > until;
+  }
+
+  startTimeLock() {
+    this._requireOwner();
+
+    storage.put("timeLockStatus", "1");
+  }
+
+  stopTimeLock() {
+    this._requireOwner();
+
+    const now = Math.floor(tx.time / 1e9);
+
+    storage.put("timeLockUntil", (now + TIME_LOCK_DURATION).toString());
+    storage.put("timeLockStatus", "0")
   }
 
   setFeeTo(feeTo) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
+    this._requireOwner();
 
     storage.put("feeTo", feeTo);
   }
@@ -57,9 +87,7 @@ class Swap {
   }
 
   setListingFee(fee) {
-    if (!blockchain.requireAuth(blockchain.contractOwner(), "active")) {
-      throw "only owner can change";
-    }
+    this._requireOwner();
 
     storage.put("listingFee", fee.toString());
   }
@@ -119,17 +147,17 @@ class Swap {
   _plusTokenBalance(token, delta, precision) {
     var balance = new BigNumber(storage.mapGet("tokenBalance", token) || "0");
     balance = balance.plus(delta);
-    storage.mapPut("tokenBalance", token, balance.toFixed(precision));
+    storage.mapPut("tokenBalance", token, balance.toFixed(precision, ROUND_DOWN));
   }
 
   _minusTokenBalance(token, delta, precision) {
     var balance = new BigNumber(storage.mapGet("tokenBalance", token) || "0");
     balance = balance.minus(delta);
-    storage.mapPut("tokenBalance", token, balance.toFixed(precision));
+    storage.mapPut("tokenBalance", token, balance.toFixed(precision, ROUND_DOWN));
   }
 
   _setTokenBalance(token, balance, precision) {
-    storage.mapPut("tokenBalance", token, balance.toFixed(precision));
+    storage.mapPut("tokenBalance", token, balance.toFixed(precision, ROUND_DOWN));
   }
 
   _getTokenBalance(token) {
@@ -220,15 +248,15 @@ class Swap {
       pair.price0CumulativeLast =
           new BigNumber(pair.price0CumulativeLast).plus(
               new BigNumber(pair.reserve1).div(
-                  pair.reserve0).times(timeElapsed)).toFixed(UNIVERSAL_PRECISION);
+                  pair.reserve0).times(timeElapsed)).toFixed(UNIVERSAL_PRECISION, ROUND_DOWN);
       pair.price1CumulativeLast =
           new BigNumber(pair.price1CumulativeLast).plus(
               new BigNumber(pair.reserve0).div(
-                  pair.reserve1).times(timeElapsed)).toFixed(UNIVERSAL_PRECISION);
+                  pair.reserve1).times(timeElapsed)).toFixed(UNIVERSAL_PRECISION, ROUND_DOWN);
     }
 
-    pair.reserve0 = balance0.toFixed(pair.precision0);
-    pair.reserve1 = balance1.toFixed(pair.precision1);
+    pair.reserve0 = balance0.toFixed(pair.precision0, ROUND_DOWN);
+    pair.reserve1 = balance1.toFixed(pair.precision1, ROUND_DOWN);
     pair.blockTimestampLast = now;
 
     blockchain.receipt(JSON.stringify(["sync", pair.reserve0, pair.reserve1]));
@@ -266,12 +294,12 @@ class Swap {
 
   _mint(xlpSymbol, toAddress, amount) {
     blockchain.callWithAuth("token.iost", "issue",
-        [xlpSymbol, toAddress, amount.toFixed(UNIVERSAL_PRECISION)]);
+        [xlpSymbol, toAddress, amount.toFixed(UNIVERSAL_PRECISION, ROUND_DOWN)]);
   }
 
   _burn(xlpSymbol, fromAddress, amount) {
     blockchain.callWithAuth("token.iost", "destroy",
-        [xlpSymbol, fromAddress, amount.toFixed(UNIVERSAL_PRECISION)]);
+        [xlpSymbol, fromAddress, amount.toFixed(UNIVERSAL_PRECISION, ROUND_DOWN)]);
   }
 
   _checkPrecision(symbol) {
@@ -296,7 +324,7 @@ class Swap {
         [pair.token0,
          tx.publisher,
          blockchain.contractName(),
-         amount0.toFixed(pair.precision0),
+         amount0.toFixed(pair.precision0, ROUND_DOWN),
          "mint xlp"]);
     this._plusTokenBalance(pair.token0, amount0, pair.precision0);
 
@@ -304,7 +332,7 @@ class Swap {
         [pair.token1,
          tx.publisher,
          blockchain.contractName(),
-         amount1.toFixed(pair.precision1),
+         amount1.toFixed(pair.precision1, ROUND_DOWN),
          "mint xlp"]);
     this._plusTokenBalance(pair.token1, amount1, pair.precision1);
 
@@ -335,7 +363,8 @@ class Swap {
     this._update(pair, balance0, balance1);
 
     if (feeOn) {
-      pair.kLast = new BigNumber(pair.reserve0).times(pair.reserve1).toFixed(pair.precision0 + pair.precision1); // reserve0 and reserve1 are up-to-date
+      pair.kLast = new BigNumber(pair.reserve0).times(pair.reserve1).toFixed(
+          pair.precision0 + pair.precision1, ROUND_DOWN); // reserve0 and reserve1 are up-to-date
     }
 
     pair.xlpSupply = blockchain.call("token.iost", "supply", [pair.xlp])[0];
@@ -375,7 +404,7 @@ class Swap {
         [pair.token0,
          blockchain.contractName(),
          toAddress,
-         amount0.toFixed(pair.precision0),
+         amount0.toFixed(pair.precision0, ROUND_DOWN),
          "burn xlp"]);
     this._minusTokenBalance(pair.token0, amount0, pair.precision0);
 
@@ -383,7 +412,7 @@ class Swap {
         [pair.token1,
          blockchain.contractName(),
          toAddress,
-         amount1.toFixed(pair.precision1),
+         amount1.toFixed(pair.precision1, ROUND_DOWN),
          "burn xlp"]);
     this._minusTokenBalance(pair.token1, amount1, pair.precision1);
 
@@ -393,16 +422,17 @@ class Swap {
     this._update(pair, balance0, balance1);
 
     if (feeOn) {
-      pair.kLast = new BigNumber(pair.reserve0).times(pair.reserve1).toFixed(pair.precision0 + pair.precision1); // reserve0 and reserve1 are up-to-date
+      pair.kLast = new BigNumber(pair.reserve0).times(pair.reserve1).toFixed(
+          pair.precision0 + pair.precision1, ROUND_DOWN); // reserve0 and reserve1 are up-to-date
     }
 
     pair.xlpSupply = blockchain.call("token.iost", "supply", [pair.xlp])[0];
     this._setPairObj(pair);
 
     if (tokenA == pair.token0) {
-      return [amount0.toFixed(pair.precision0), amount1.toFixed(pair.precision1)];
+      return [amount0.toFixed(pair.precision0, ROUND_DOWN), amount1.toFixed(pair.precision1, ROUND_DOWN)];
     } else {
-      return [amount1.toFixed(pair.precision1), amount0.toFixed(pair.precision0)];
+      return [amount1.toFixed(pair.precision1, ROUND_DOWN), amount0.toFixed(pair.precision0, ROUND_DOWN)];
     }
   }
 
@@ -440,7 +470,7 @@ class Swap {
           [pair.token0,
            srcAddress,
            blockchain.contractName(),
-           amount0In.toFixed(pair.precision0),
+           amount0In.toFixed(pair.precision0, ROUND_DOWN),
            "swap in"]);
       this._plusTokenBalance(pair.token0, amount0In, pair.precision0);
     }
@@ -451,7 +481,7 @@ class Swap {
           [pair.token1,
            srcAddress,
            blockchain.contractName(),
-           amount1In.toFixed(pair.precision1),
+           amount1In.toFixed(pair.precision1, ROUND_DOWN),
            "swap in"]);
       this._plusTokenBalance(pair.token1, amount1In, pair.precision1);
     }
@@ -462,7 +492,7 @@ class Swap {
           [pair.token0,
            blockchain.contractName(),
            dstAddress,
-           amount0Out.toFixed(pair.precision0),
+           amount0Out.toFixed(pair.precision0, ROUND_DOWN),
            "swap out"]);
       this._minusTokenBalance(pair.token0, amount0Out, pair.precision0);
     }
@@ -473,7 +503,7 @@ class Swap {
           [pair.token1,
            blockchain.contractName(),
            dstAddress,
-           amount1Out.toFixed(pair.precision1),
+           amount1Out.toFixed(pair.precision1, ROUND_DOWN),
            "swap out"]);
       this._minusTokenBalance(pair.token1, amount1Out, pair.precision1);
     }
@@ -514,7 +544,7 @@ class Swap {
             [token,
              blockchain.contractName(),
              this._getFeeTo() || tx.publisher,
-             realBalance.minus(map[token]).toFixed(precision),
+             realBalance.minus(map[token]).toFixed(precision, ROUND_DOWN),
              "skim all"]);
       }
     }
@@ -532,7 +562,7 @@ class Swap {
           [token,
            blockchain.contractName(),
            this._getFeeTo() || tx.publisher,
-           realBalance.minus(balance).toFixed(precision),
+           realBalance.minus(balance).toFixed(precision, ROUND_DOWN),
            "skim"]);
     }
   }

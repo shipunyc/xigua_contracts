@@ -29,7 +29,7 @@
             "description": ""
         },
         {
-            "name": "setFeeTo",
+            "name": "setFarmAdmin",
             "args": [
                 "string"
             ],
@@ -37,7 +37,7 @@
             "description": ""
         },
         {
-            "name": "setListingFee",
+            "name": "setExtra",
             "args": [
                 "string"
             ],
@@ -45,8 +45,10 @@
             "description": ""
         },
         {
-            "name": "getPair",
+            "name": "addPool",
             "args": [
+                "string",
+                "string",
                 "string",
                 "string"
             ],
@@ -54,79 +56,80 @@
             "description": ""
         },
         {
-            "name": "allPairs",
+            "name": "setPool",
+            "args": [
+                "string",
+                "string",
+                "string",
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "updatePool",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "updateAllPools",
             "args": [],
             "amountLimit": [],
             "description": ""
         },
         {
-            "name": "createPair",
+            "name": "getRewardPending",
             "args": [
                 "string",
                 "string"
             ],
-            "amountLimit": [{
-                "token": "*",
-                "val": "unlimited"
-            }],
-            "description": ""
-        },
-        {
-            "name": "mint",
-            "args": [
-                "string",
-                "string",
-                "string",
-                "string",
-                "string"
-            ],
-            "amountLimit": [{
-                "token": "*",
-                "val": "unlimited"
-            }],
-            "description": ""
-        },
-        {
-            "name": "burn",
-            "args": [
-                "string",
-                "string",
-                "string",
-                "string"
-            ],
-            "amountLimit": [{
-                "token": "*",
-                "val": "unlimited"
-            }],
-            "description": ""
-        },
-        {
-            "name": "swap",
-            "args": [
-                "string",
-                "string",
-                "string",
-                "string",
-                "string",
-                "string",
-                "string",
-                "string"
-            ],
-            "amountLimit": [{
-                "token": "*",
-                "val": "unlimited"
-            }],
-            "description": ""
-        },
-        {
-            "name": "skimAll",
-            "args": [],
             "amountLimit": [],
             "description": ""
         },
         {
-            "name": "skim",
+            "name": "getExtraPending",
             "args": [
+                "string",
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "deposit",
+            "args": [
+                "string",
+                "string"
+            ],
+            "amountLimit": [{
+                "token": "*",
+                "val": "unlimited"
+            }],
+            "description": ""
+        },
+        {
+            "name": "withdraw",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "claim",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "getUserAmount",
+            "args": [
+                "string",
                 "string"
             ],
             "amountLimit": [],

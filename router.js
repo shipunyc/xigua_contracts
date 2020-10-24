@@ -1,5 +1,6 @@
 // Router
 
+const ROUND_DOWN = 1;
 
 class Router {
 
@@ -7,7 +8,35 @@ class Router {
   }
 
   can_update(data) {
-    return blockchain.requireAuth(blockchain.contractOwner(), "active");
+    return blockchain.requireAuth(blockchain.contractOwner(), "active") && !this.isLocked();
+  }
+
+  _requireOwner() {
+    if(!blockchain.requireAuth(blockchain.contractOwner(), 'active')){
+      throw 'require auth error:not contractOwner';
+    }
+  }
+
+  isLocked() {
+    const now = Math.floor(tx.time / 1e9);
+    const status = +storage.get("timeLockStatus") || 0;
+    const until = +storage.get("timeLockUntil") || 0;
+    return status == 0 && now > until;
+  }
+
+  startTimeLock() {
+    this._requireOwner();
+
+    storage.put("timeLockStatus", "1");
+  }
+
+  stopTimeLock() {
+    this._requireOwner();
+
+    const now = Math.floor(tx.time / 1e9);
+
+    storage.put("timeLockUntil", (now + TIME_LOCK_DURATION).toString());
+    storage.put("timeLockStatus", "0")
   }
 
   setSwap(swap) {
@@ -102,10 +131,10 @@ class Router {
     const precisionA = tokenA == pair.token0 ? pair.precision0 : pair.precision1;
     const precisionB = tokenA == pair.token0 ? pair.precision1 : pair.precision0;
 
-    amountADesired = new BigNumber(new BigNumber(amountADesired).toFixed(precisionA));
-    amountBDesired = new BigNumber(new BigNumber(amountBDesired).toFixed(precisionB));
-    amountAMin = new BigNumber(new BigNumber(amountAMin).toFixed(precisionA));
-    amountBMin = new BigNumber(new BigNumber(amountBMin).toFixed(precisionB));
+    amountADesired = new BigNumber(new BigNumber(amountADesired).toFixed(precisionA, ROUND_DOWN));
+    amountBDesired = new BigNumber(new BigNumber(amountBDesired).toFixed(precisionB, ROUND_DOWN));
+    amountAMin = new BigNumber(new BigNumber(amountAMin).toFixed(precisionA, ROUND_DOWN));
+    amountBMin = new BigNumber(new BigNumber(amountBMin).toFixed(precisionB, ROUND_DOWN));
 
     if (amountADesired.lte(0) || amountBDesired.lte(0) || amountAMin.lte(0) || amountBMin.lte(0)) {
       throw "Xigua: INVALID_INPUT";
@@ -116,9 +145,11 @@ class Router {
     const amountA = amountArray[0];
     const amountB = amountArray[1];
     const liquidity = blockchain.call(
-        this._getSwap(), "mint", [tokenA, tokenB, amountA.toFixed(precisionA), amountB.toFixed(precisionB), toAddress])[0];
+        this._getSwap(),
+        "mint",
+        [tokenA, tokenB, amountA.toFixed(precisionA, ROUND_DOWN), amountB.toFixed(precisionB, ROUND_DOWN), toAddress])[0];
 
-    return [amountA.toFixed(precisionA), amountB.toFixed(precisionB), liquidity];
+    return [amountA.toFixed(precisionA, ROUND_DOWN), amountB.toFixed(precisionB, ROUND_DOWN), liquidity];
   }
 
   createPairAndAddLiquidity(
@@ -174,7 +205,7 @@ class Router {
       throw "Xigua: INSUFFICIENT_B_AMOUNT";
     }
 
-    return [amountA.toFixed(precisionA), amountB.toFixed(precisionB)];
+    return [amountA.toFixed(precisionA, ROUND_DOWN), amountB.toFixed(precisionB, ROUND_DOWN)];
   }
 
   _swap(amounts, path, toAddress) {
@@ -241,7 +272,7 @@ class Router {
     const amountInWithFee = amountIn.times(997);
     const numerator = amountInWithFee.times(reserveOut);
     const denominator = reserveIn.times(1000).plus(amountInWithFee);
-    return numerator.div(denominator).toFixed(precision);
+    return numerator.div(denominator).toFixed(precision, ROUND_DOWN);
   }
 
   // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
@@ -265,7 +296,7 @@ class Router {
 
     const numerator = reserveIn.times(amountOut).times(1000);
     const denominator = reserveOut.minus(amountOut).times(997);
-    return numerator.div(denominator).plus(1 / 10 ** precision).toFixed(precision);
+    return numerator.div(denominator).plus(1 / 10 ** precision).toFixed(precision, ROUND_DOWN);
   }
 
   // performs chained getAmountOut calculations on any number of pairs

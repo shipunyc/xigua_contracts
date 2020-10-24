@@ -11,3 +11,12 @@ https://www.iostabc.com/contract/Contract2NrMFPeju44ddmkBkeMLjy56cofBVzd4BVfGGi6
 
 oracle:
 https://www.iostabc.com/contract/Contract8RZcA6P6yhPiE38fkMeXH8bqsqqkhPQjsFxYFv9RFm76
+
+burner:
+https://www.iostabc.com/contract/Contract9kdRJheh9PXe69tbVYYfyZZAGrzeKGbZmi2wCGSbWg78
+
+extra:
+https://www.iostabc.com/contract/Contract7WkCQjnRHTJJJVwayaW6StnGTRJGiKN5AJdDVMG6nSNL
+
+farm:
+https://www.iostabc.com/contract/Contract4ZQsqLrDLUSFQRZoZRSxcdJhVaX6a6K7KbzotZRF6DoL
