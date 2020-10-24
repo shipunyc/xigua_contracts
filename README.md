@@ -10,7 +10,7 @@ bank:
 https://www.iostabc.com/contract/Contract2NrMFPeju44ddmkBkeMLjy56cofBVzd4BVfGGi6S5vdk
 
 oracle:
-https://www.iostabc.com/contract/Contract8RZcA6P6yhPiE38fkMeXH8bqsqqkhPQjsFxYFv9RFm76
+https://www.iostabc.com/contract/Contract31zSoLKV2hgYHA7z2hvnnzPEtQKmUrkAPKQ5tTmQcepw
 
 burner:
 https://www.iostabc.com/contract/Contract9kdRJheh9PXe69tbVYYfyZZAGrzeKGbZmi2wCGSbWg78

@@ -23,7 +23,9 @@ https://www.coindesk.com/okex-suspends-withdrawals
 */
 
 const PRICE_PRECISION = 6;
-const TOTAL_MINUTES = 60 * 24 * 30;
+const TOTAL_MINUTES = 60 * 24 * 10;  // 10 days.
+
+const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
 class Oracle {
 
@@ -44,7 +46,7 @@ class Oracle {
     const now = Math.floor(tx.time / 1e9);
     const status = +storage.get("timeLockStatus") || 0;
     const until = +storage.get("timeLockUntil") || 0;
-    return status == 0 && now > until;
+    return status == 1 || now < until;
   }
 
   startTimeLock() {

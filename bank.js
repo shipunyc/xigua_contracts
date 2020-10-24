@@ -47,7 +47,7 @@ class Bank {
     const now = Math.floor(tx.time / 1e9);
     const status = +storage.get("timeLockStatus") || 0;
     const until = +storage.get("timeLockUntil") || 0;
-    return status == 0 && now > until;
+    return status == 1 || now < until;
   }
 
   _requireUnlocked() {
