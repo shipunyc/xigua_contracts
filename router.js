@@ -1,6 +1,7 @@
 // Router
 
 const ROUND_DOWN = 1;
+const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
 class Router {
 

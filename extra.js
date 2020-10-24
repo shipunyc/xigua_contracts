@@ -2,6 +2,8 @@
 
 const VOST_PRECISION = 8;
 const XUSD_PRECISION = 6;
+const ROUND_DOWN = 1;
+const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
 class Extra {
 
@@ -63,7 +65,7 @@ class Extra {
   }
 
   _setBalance(balance) {
-    storage.put("balance", balance.toFixed(VOST_PRECISION));
+    storage.put("balance", balance.toFixed(VOST_PRECISION, ROUND_DOWN));
   }
 
   _getBalance() {
@@ -154,7 +156,7 @@ class Extra {
       const hasPath = +blockchain.call(this._getRouter(), "hasPath", [pathStr])[0];
       if (hasPath) {
         const amounts = JSON.parse(blockchain.call(
-            this._getRouter(), "getAmountsOut", amountToSwap.toFixed(VOST_PRECISION), pathStr)[0]);
+            this._getRouter(), "getAmountsOut", amountToSwap.toFixed(VOST_PRECISION, ROUND_DOWN), pathStr)[0]);
         if (!bestPath || bestReturn.lt(amounts[amounts.length - 1])) {
           bestPath = pathStr;
           bestReturn = new BigNumber(amounts[amounts.length - 1]);
@@ -165,8 +167,8 @@ class Extra {
     const amountsFinal = JSON.parse(blockchain.callWithAuth(
         this._getRouter(),
         "swapExactTokensForTokens"
-        [amountToSwap.toFixed(VOST_PRECISION),
-         bestReturn.times(0.99).toFixed(XUSD_PRECISION),  // slippage 1%
+        [amountToSwap.toFixed(VOST_PRECISION, ROUND_DOWN),
+         bestReturn.times(0.99).toFixed(XUSD_PRECISION, ROUND_DOWN),  // slippage 1%
          path,
          blockchain.contractName()])[0]);
 

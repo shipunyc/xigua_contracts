@@ -16,7 +16,7 @@ burner:
 https://www.iostabc.com/contract/Contract9kdRJheh9PXe69tbVYYfyZZAGrzeKGbZmi2wCGSbWg78
 
 extra:
-https://www.iostabc.com/contract/Contract7WkCQjnRHTJJJVwayaW6StnGTRJGiKN5AJdDVMG6nSNL
+https://www.iostabc.com/contract/ContractGq5ckWbmcWymbKVGzoPfmXBrqWeCNKFhNE5s6KGUaSiZ
 
 farm:
 https://www.iostabc.com/contract/Contract4ZQsqLrDLUSFQRZoZRSxcdJhVaX6a6K7KbzotZRF6DoL

@@ -1,6 +1,7 @@
 // Burner
 
 const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
+const ROUND_DOWN = 1;
 
 class Burner {
 
@@ -63,12 +64,12 @@ class Burner {
       pathArray.push([token, 'xusd', 'xg']);
     }
 
-    const amountIn = +blockchain.call(
+    const amountIn = new BigNumber(blockchain.call(
         "token.iost",
         "balanceOf",
-        [token, blockchain.contractName()])[0];
+        [token, blockchain.contractName()])[0]);
 
-    if (!amountIn) {
+    if (amountIn.eq(0)) {
       return;
     }
 
@@ -82,7 +83,7 @@ class Burner {
       const hasPath = +blockchain.call(this._getRouter(), "hasPath", [pathStr])[0];
       if (hasPath) {
         const amounts = JSON.parse(blockchain.call(
-            this._getRouter(), "getAmountsOut", amountIn.toFixed(precision), pathStr)[0]);
+            this._getRouter(), "getAmountsOut", amountIn.toFixed(precision, ROUND_DOWN), pathStr)[0]);
         if (!bestPath || bestReturn.lt(amounts[amounts.length - 1])) {
           bestPath = pathStr;
           bestReturn = new BigNumber(amounts[amounts.length - 1]);
@@ -93,8 +94,8 @@ class Burner {
     blockchain.callWithAuth(
         this._getRouter(),
         "swapExactTokensForTokens"
-        [amountIn.toFixed(precision),
-         bestReturn.times(0.99).toFixed(precision),  // slippage 1%
+        [amountIn.toFixed(precision, ROUND_DOWN),
+         bestReturn.times(0.99).toFixed(precision, ROUND_DOWN),  // slippage 1%
          path,
          blockchain.contractName()]);
 

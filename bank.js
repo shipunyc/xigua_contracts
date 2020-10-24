@@ -27,6 +27,7 @@ const VOST_PRECISION = 8;
 const XUSD_PRECISION = 6;
 const ROUND_DOWN = 1;
 const DEFAULT_MINUTES = "10";
+const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
 class Bank {
 
