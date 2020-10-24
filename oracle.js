@@ -24,7 +24,6 @@ https://www.coindesk.com/okex-suspends-withdrawals
 
 const PRICE_PRECISION = 6;
 const TOTAL_MINUTES = 60 * 24 * 10;  // 10 days.
-const ROUND_DOWN = 1;
 const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
 class Oracle {
@@ -87,7 +86,7 @@ class Oracle {
     const now = Math.floor(tx.time / 1e9);
     const tid = Math.floor(now / 60) % TOTAL_MINUTES;
 
-    storage.mapPut(exchange + "_price", tid.toString(), (+price).toFixed(6, ROUND_DOWN));
+    storage.mapPut(exchange + "_price", tid.toString(), (+price).toFixed(6));
   }
 
   getPrice(exchange, tid) {
@@ -111,13 +110,13 @@ class Oracle {
 
     if (array.length == 0) return 0;
     if (array.length == 1) return array[0];
-    if (array.length == 2) return +((array[0] + array[1]) / 2).toFixed(6, ROUND_DOWN);
+    if (array.length == 2) return +((array[0] + array[1]) / 2).toFixed(6);
     if (array.length == 3) {
       array.sort();
       if (array[1] - array[0] < array[2] - array[1]) {
-        return +((array[0] + array[1]) / 2).toFixed(PRICE_PRECISION, ROUND_DOWN);
+        return +((array[0] + array[1]) / 2).toFixed(PRICE_PRECISION);
       } else {
-        return +((array[1] + array[2]) / 2).toFixed(PRICE_PRECISION, ROUND_DOWN);
+        return +((array[1] + array[2]) / 2).toFixed(PRICE_PRECISION);
       }
     }
   }
@@ -141,7 +140,7 @@ class Oracle {
       throw "no price";
     }
 
-    return sum.div(count).toFixed(PRICE_PRECISION, ROUND_DOWN);
+    return sum.div(count).toFixed(PRICE_PRECISION);
   }
 }
 
