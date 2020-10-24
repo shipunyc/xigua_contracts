@@ -36,7 +36,7 @@
   tokenPrecision: 0,
   extra: "",  // The extra token to mine besides XG, can be empty
   extraPrecision: 0,
-  alloc: "",
+  alloc: 1,
   lastRewardTime: 0,
   accPerShare: "0",
   accPerShareExtra: "0"
@@ -170,7 +170,7 @@ class Farm {
       throw "Xigua: negative total alloc";
     }
 
-    storage.put("totalAlloc", totalAlloc);
+    storage.put("totalAlloc", totalAlloc.toString());
   }
 
   _hasPool(token) {
@@ -187,6 +187,9 @@ class Farm {
 
   addPool(token, extra, alloc, willUpdate) {
     this._requireOwnerOrAddress(this._getFarmAdmin());
+
+    alloc = Math.floor(+alloc || 0);
+    willUpdate = +willUpdate || 0;
 
     if (this._hasPool(token)) {
       throw "pool exists";
@@ -213,6 +216,9 @@ class Farm {
 
   setPool(token, extra, alloc, willUpdate) {
     this._requireOwnerOrAddress(this._getFarmAdmin());
+
+    alloc = Math.floor(+alloc || 0);
+    willUpdate = +willUpdate || 0;
 
     if (!this._hasPool(token)) {
       throw "Xigua: NO_POOL_FOR_TOKEN";
@@ -277,16 +283,19 @@ class Farm {
     const multiplier = this._getMultiplier(pool.lastRewardTime, now);
     const totalAlloc = this._getTotalAlloc();
     const reward = multiplier.times(pool.alloc).div(totalAlloc);
-    const rewardForFarmers = reward.times(0.9);
-    const rewardForDev = reward.times(0.1);
 
-    // Mint XG.
-    blockchain.callWithAuth("token.iost", "issue",
-        ["xg", blockchain.contractName(), rewardForFarmers.toFixed(XG_PRECISION, ROUND_DOWN)]);
-    blockchain.callWithAuth("token.iost", "issue",
-        ["xg", blockchain.contractName(), rewardForDev.toFixed(XG_PRECISION, ROUND_DOWN)]);
+    if (reward.gt(e)) {
+      const rewardForFarmers = reward.times(0.9);
+      const rewardForDev = reward.times(0.1);
 
-    pool.accPerShare = new BigNumber(pool.accPerShare).plus(rewardForFarmers.div(total)).toFixed(XG_PRECISION, ROUND_DOWN);
+      // Mint XG.
+      blockchain.callWithAuth("token.iost", "issue",
+          ["xg", blockchain.contractName(), rewardForFarmers.toFixed(XG_PRECISION, ROUND_DOWN)]);
+      blockchain.callWithAuth("token.iost", "issue",
+          ["xg", blockchain.contractName(), rewardForDev.toFixed(XG_PRECISION, ROUND_DOWN)]);
+
+      pool.accPerShare = new BigNumber(pool.accPerShare).plus(rewardForFarmers.div(total)).toFixed(XG_PRECISION, ROUND_DOWN);
+    }
 
     // 2) Precess Extra
 

@@ -111,7 +111,7 @@ class Extra {
     this._setLastTime(lastTime);
 
     const oldBalance = this._getBalance();
-    const newBalance = new BigNumber(blockchain.call("token.iost"));
+    const newBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
 
     // Queue in
     if (newBalance.gt(oldBalance)) {
@@ -120,7 +120,7 @@ class Extra {
       const delta = newBalance.minus(oldBalance);
       queue.push({
         startTime: now,
-        delta: delta
+        delta: delta.toFixed(VOST_PRECISION, ROUND_DOWN)
       });
     }
 
@@ -133,11 +133,12 @@ class Extra {
 
     // amountToSwap should be less than current balance in case
     // there is calculator error due to rounding.
-    const vostBalance = new BigNumber(blockchain.call(
-        "token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
+    if (amountToSwap.lt(newBalance)) {
+      amountToSwap = newBalance;
+    }
 
-    if (amountToSwap.lt(vostBalance)) {
-      amountToSwap = vostBalance;
+    if (amountToSwap.lte(0)) {
+      return "0";
     }
 
     // Now convert sum of vost into xusd, and send to farm.
