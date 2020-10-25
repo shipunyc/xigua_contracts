@@ -20,6 +20,12 @@ tx.hash => {
 
 #vostBalance
 
+#inflationData {
+  iost: "0",
+  xusd: "0",
+  lastTime: 0
+}
+
 */
 
 const IOST_PRECISION = 8;
@@ -151,6 +157,28 @@ class Bank {
 
   _getMaxRatio() {
     return +storage.get("maxRatio") || 2.5;
+  }
+
+  setRouter(router) {
+    this._requireOwner();
+    this._requireUnlocked();
+
+    storage.put("router", router.toString());
+  }
+
+  _getRouter() {
+    return storage.get("router");
+  }
+
+  setSwap(swap) {
+    this._requireOwner();
+    this._requireUnlocked();
+
+    storage.put("swap", swap.toString());
+  }
+
+  _getSwap() {
+    return storage.get("swap");
   }
 
   _setInfo(who, info) {
@@ -474,6 +502,134 @@ class Bank {
         hash,
         info.locked,
         info.borrowed]));
+  }
+
+  _getInflationData() {
+    return JSON.parse(storage.get("inflationData") || "null");
+  }
+
+  _setInflationData(data) {
+    storage.put("inflationData", JSON.stringify(data));
+  }
+
+  inflate() {
+    this._requireOwner();
+
+    const price = blockchain.call(this._getOracle(), "getAverageGoodPrice", [DEFAULT_MINUTES])[0];
+
+    if (new BigNumber(price).eq(0)) {
+      throw "Xigua: oracle error";
+    }
+
+    const pair = JSON.parse(blockchain.call(this._getSwap(), "getPair", ["iost", "xusd"])[0]);
+
+    const reserveIOST = new BigNumber(pair.reserve0);
+    const reserveXUSD = new BigNumber(pair.reserve1);
+
+    if (reserveIOST.times(price).lt(reserveXUSD.times(1.2))) {
+      throw "Xigua: no need to inflate";
+    }
+
+    const inflationData = this._getInflationData() || {iost: "0", xusd: "0", lastTime: 0};
+
+    const now = Math.floor(tx.time / 1e9);
+
+    if (now < inflationData.lastTime + 20 * 60) {
+      throw "Xigua: can inflate or deflate once every 20 minutes";
+    }
+
+    const amountToInflate = reserveXUSD.div(100);
+    blockchain.callWithAuth("token.iost", "issue",
+        ["xusd",
+         blockchain.contractName(),
+         amountToInflate,
+         "inflate"]);
+    const path = JSON.stringify(["xusd", "iost"]);
+
+    const amounts = JSON.parse(blockchain.callWithAuth(
+        this._getRouter(),
+        "swapExactTokensForTokens",
+        [amountToInflate.toFixed(XUSD_PRECISION, ROUND_DOWN),
+         "0",
+         path,
+         blockchain.contractName()])[0]);
+
+    inflationData.iost = new BigNumber(inflationData.iost).plus(amounts[amounts.length - 1]).toFixed(IOST_PRECISION, ROUND_DOWN);
+    inflationData.xusd = new BigNumber(inflationData.xusd).plus(amountToInflate).toFixed(XUSD_PRECISION, ROUND_DOWN);
+    inflationData.lastTime = now;
+
+    this._setInflationData(inflationData);
+  }
+
+  deflate() {
+    this._requireOwner();
+
+    const price = blockchain.call(this._getOracle(), "getAverageGoodPrice", [DEFAULT_MINUTES])[0];
+    
+    if (new BigNumber(price).eq(0)) {
+      throw "Xigua: oracle error";
+    }
+
+    const reserveIOST = new BigNumber(pair.reserve0);
+    const reserveXUSD = new BigNumber(pair.reserve1);
+    
+    if (reserveIOST.times(price).gt(reserveXUSD.times(0.83))) {
+      throw "Xigua: no need to deflate";
+    }
+
+    const inflationData = this._getInflationData() || {iost: "0", xusd: "0", lastTime: 0};
+    
+    const now = Math.floor(tx.time / 1e9);
+    
+    if (now < inflationData.lastTime + 20 * 60) {
+      throw "Xigua: can inflate or deflate once every 20 minutes";
+    }
+
+    // Buy the less of 20% of inflationData or 1% of pair reserve.
+    var amountToBuy = new BigNumber(inflationData.iost).div(5);
+    if (amountToBuy.gt(reserveIOST.div(100))) {
+      amountToBuy = reserveIOST.div(100);
+    }
+
+    const path = JSON.stringify(["iost", "xusd"]);
+
+    const amounts = JSON.parse(blockchain.callWithAuth(
+        this._getRouter(),
+        "swapExactTokensForTokens",
+        [amountToBuy.toFixed(XUSD_PRECISION, ROUND_DOWN),
+         "0",
+         path,
+         blockchain.contractName()])[0]);
+
+    const boughtXUSDStr = amounts[amounts.length - 1];
+
+    if (new BigNumber(inflationData.iost).times(boughtXUSDStr).lt(amountToBuy.times(inflationData.xusd))) {
+      throw "Xigua: can not break even";
+    }
+
+    // Burn XUSD.
+    blockchain.callWithAuth("token.iost", "destroy",
+        ["xusd",
+         blockchain.contractName(),
+         boughtXUSDStr,
+         "deflate"]);
+
+    // Updates inflationData.
+
+    const newIOSTAmount = new BigNumber(inflationData.iost).minus(amountToBuy);
+    const newXUSDAmount = new BigNumber(inflationData.xusd).minus(boughtXUSDStr);
+
+    inflationData.iost = newIOSTAmount.toFixed(IOST_PRECISION, ROUND_DOWN);
+
+    if (newXUSDAmount.gt(0)) {
+      inflationData.xusd = newXUSDAmount.toFixed(XUSD_PRECISION, ROUND_DOWN);
+    } else {
+      inflationData.xusd = "0";
+    }
+
+    inflationData.lastTime = now;
+
+    this._setInflationData(inflationData);
   }
 
   // force vost balance to match real balance, by doing this we send vost to extra and feeTo (burner).

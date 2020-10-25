@@ -64,8 +64,8 @@ class Extra {
     return storage.get("farm") || '';
   }
 
-  _setBalance(balance) {
-    storage.put("balance", balance.toFixed(VOST_PRECISION, ROUND_DOWN));
+  _setBalance(balanceStr) {
+    storage.put("balance", balanceStr);
   }
 
   _getBalance() {
@@ -85,13 +85,17 @@ class Extra {
   }
 
   _getLastTime() {
-    return JSON.parse(storage.get("lastTime") || "[]");
+    return JSON.parse(storage.get("lastTime") || "0");
   }
 
   // Farm is the only caller (for now).
-  takeExtra() {
+  takeExtra(token) {
     if (!blockchain.requireAuth(this._getFarm(), "active")) {
       throw "only approved contracts can issue";
+    }
+
+    if (token != "xusd") {
+      throw "currently only xusd is support";
     }
 
     const queue = this._getQueue();
@@ -108,7 +112,7 @@ class Extra {
       amountToSwap = amountToSwap.plus(amount);
     }
 
-    this._setLastTime(lastTime);
+    this._setLastTime(now);
 
     const oldBalance = this._getBalance();
     const newBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
@@ -150,14 +154,14 @@ class Extra {
     ]];
 
     var bestPath = "";
-    var bestReturn = new bigNumber(0);
+    var bestReturn = new BigNumber(0);
 
     for (let i = 0; i < pathArray.length; ++i) {
       const pathStr = JSON.stringify(pathArray[i]);
       const hasPath = +blockchain.call(this._getRouter(), "hasPath", [pathStr])[0];
       if (hasPath) {
         const amounts = JSON.parse(blockchain.call(
-            this._getRouter(), "getAmountsOut", amountToSwap.toFixed(VOST_PRECISION, ROUND_DOWN), pathStr)[0]);
+            this._getRouter(), "getAmountsOut", [amountToSwap.toFixed(VOST_PRECISION, ROUND_DOWN), pathStr])[0]);
         if (!bestPath || bestReturn.lt(amounts[amounts.length - 1])) {
           bestPath = pathStr;
           bestReturn = new BigNumber(amounts[amounts.length - 1]);
@@ -167,10 +171,10 @@ class Extra {
 
     const amountsFinal = JSON.parse(blockchain.callWithAuth(
         this._getRouter(),
-        "swapExactTokensForTokens"
+        "swapExactTokensForTokens",
         [amountToSwap.toFixed(VOST_PRECISION, ROUND_DOWN),
          bestReturn.times(0.99).toFixed(XUSD_PRECISION, ROUND_DOWN),  // slippage 1%
-         path,
+         bestPath,
          blockchain.contractName()])[0]);
 
     const xusdAmountStr = amountsFinal[amountsFinal.length - 1];
@@ -182,6 +186,9 @@ class Extra {
          this._getFarm(),
          xusdAmountStr,
          "take extra"]);
+
+    // Update vost balance before we go.
+    this._setBalance(blockchain.call("token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
 
     return xusdAmountStr;
   }

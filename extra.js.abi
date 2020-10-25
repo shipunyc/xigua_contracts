@@ -46,7 +46,9 @@
         },
         {
             "name": "takeExtra",
-            "args": [],
+            "args": [
+                "string"
+            ],
             "amountLimit": [],
             "description": ""
         }

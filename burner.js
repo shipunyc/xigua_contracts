@@ -76,14 +76,14 @@ class Burner {
     const precision = this._checkPrecision(token);
 
     var bestPath = "";
-    var bestReturn = new bigNumber(0);
+    var bestReturn = new BigNumber(0);
 
     for (let i = 0; i < pathArray.length; ++i) {
       const pathStr = JSON.stringify(pathArray[i]);
       const hasPath = +blockchain.call(this._getRouter(), "hasPath", [pathStr])[0];
       if (hasPath) {
         const amounts = JSON.parse(blockchain.call(
-            this._getRouter(), "getAmountsOut", amountIn.toFixed(precision, ROUND_DOWN), pathStr)[0]);
+            this._getRouter(), "getAmountsOut", [amountIn.toFixed(precision, ROUND_DOWN), pathStr])[0]);
         if (!bestPath || bestReturn.lt(amounts[amounts.length - 1])) {
           bestPath = pathStr;
           bestReturn = new BigNumber(amounts[amounts.length - 1]);
@@ -93,10 +93,10 @@ class Burner {
 
     blockchain.callWithAuth(
         this._getRouter(),
-        "swapExactTokensForTokens"
+        "swapExactTokensForTokens",
         [amountIn.toFixed(precision, ROUND_DOWN),
          bestReturn.times(0.99).toFixed(precision, ROUND_DOWN),  // slippage 1%
-         path,
+         bestPath,
          blockchain.contractName()]);
 
     // Now burn all xg.

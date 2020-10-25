@@ -209,8 +209,8 @@ class Farm {
       extraPrecision: extra ? this._checkPrecision(extra) : 0,
       alloc: alloc,
       lastRewardTime: 0,
-      accPerShare: 0,
-      accPerShareExtra: 0
+      accPerShare: "0",
+      accPerShareExtra: "0"
     }));
   }
 
@@ -272,7 +272,7 @@ class Farm {
     const total = new BigNumber(blockchain.call(
         "token.iost", "balanceOf", [token, blockchain.contractName()])[0]);
 
-    if (total == 0) {
+    if (total.eq(0)) {
       pool.lastRewardTime = now;
       this._setPoolObj(token, pool);
       return;
@@ -282,9 +282,9 @@ class Farm {
 
     const multiplier = this._getMultiplier(pool.lastRewardTime, now);
     const totalAlloc = this._getTotalAlloc();
-    const reward = multiplier.times(pool.alloc).div(totalAlloc);
+    const reward = new BigNumber(multiplier).times(pool.alloc).div(totalAlloc);
 
-    if (reward.gt(e)) {
+    if (reward.gt(0)) {
       const rewardForFarmers = reward.times(0.9);
       const rewardForDev = reward.times(0.1);
 
@@ -344,7 +344,7 @@ class Farm {
     if (now > pool.lastRewardTime && total.gt(e)) {
       const multiplier = this._getMultiplier(pool.lastRewardTime, now);
       const totalAlloc = this._getTotalAlloc();
-      const reward = multiplier.times(pool.alloc).div(totalAlloc);
+      const reward = new BigNumber(multiplier).times(pool.alloc).div(totalAlloc);
       accPerShare = accPerShare.plus(reward).div(total);
     }
 
