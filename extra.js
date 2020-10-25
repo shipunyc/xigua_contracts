@@ -2,6 +2,7 @@
 
 const VOST_PRECISION = 8;
 const XUSD_PRECISION = 6;
+const MINIMUM_VOST_UNIT = 100;
 const ROUND_DOWN = 1;
 const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
@@ -104,7 +105,6 @@ class Extra {
 
     var amountToSwap = new BigNumber(0);
 
-    // Most of the time, queue size is 1 or 2.
     for (let i = 0; i < queue.length; ++i) {
       const time = Math.min(now, queue[i].startTime + 3600 * 24);
       const amount = new BigNumber(queue[i].delta).times(
@@ -118,9 +118,9 @@ class Extra {
     const newBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
 
     // Queue in
-    if (newBalance.gt(oldBalance)) {
+    if (newBalance.minus(oldBalance).gte(MINIMUM_VOST_UNIT)) {
       // Every time the vost balance goes up, it will be distributed in the next
-      // 24 hours evently.
+      // 24 hours evenly.
       const delta = newBalance.minus(oldBalance);
       queue.push({
         startTime: now,
@@ -137,11 +137,11 @@ class Extra {
 
     // amountToSwap should be less than current balance in case
     // there is calculator error due to rounding.
-    if (amountToSwap.lt(newBalance)) {
+    if (amountToSwap.gt(newBalance)) {
       amountToSwap = newBalance;
     }
 
-    if (amountToSwap.lte(0)) {
+    if (amountToSwap.lt(MINIMUM_VOST_UNIT)) {
       return "0";
     }
 
