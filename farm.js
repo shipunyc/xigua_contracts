@@ -116,14 +116,14 @@ class Farm {
   }
   */
 
-  setFarmAdmin(farmAdmin) {
+  setFarmHelper(farmHelper) {
     this._requireOwner();
 
-    storage.put("farmAdmin", farmAdmin);
+    storage.put("farmHelper", farmHelper);
   }
 
-  _getFarmAdmin() {
-    return storage.get("farmAdmin") || '';
+  _getFarmHelper() {
+    return storage.get("farmHelper") || '';
   }
 
   setExtra(extra) {
@@ -186,7 +186,7 @@ class Farm {
   }
 
   addPool(token, extra, alloc, willUpdate) {
-    this._requireOwnerOrAddress(this._getFarmAdmin());
+    this._requireOwnerOrAddress(this._getFarmHelper());
 
     alloc = Math.floor(+alloc || 0);
     willUpdate = +willUpdate || 0;
@@ -215,7 +215,7 @@ class Farm {
   }
 
   setPool(token, extra, alloc, willUpdate) {
-    this._requireOwnerOrAddress(this._getFarmAdmin());
+    this._requireOwnerOrAddress(this._getFarmHelper());
 
     alloc = Math.floor(+alloc || 0);
     willUpdate = +willUpdate || 0;
