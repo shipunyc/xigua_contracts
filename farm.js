@@ -142,7 +142,7 @@ class Farm {
   }
 
   _setUserInfo(who, info) {
-    storage.mapPut(who, JSON.stringify(info));
+    storage.mapPut("userInfo", who, JSON.stringify(info));
   }
 
   _getTokenArray() {
@@ -334,14 +334,16 @@ class Farm {
         extraPending: "0",
         extraDebt: "0"
       }
+
+      return "0";
     }
 
-    const accPerShare = new BigNumber(pool.accPerShare);
+    var accPerShare = new BigNumber(pool.accPerShare);
     const total = new BigNumber(pool.total);
 
     const now = Math.floor(tx.time / 1e9);
 
-    if (now > pool.lastRewardTime && total.gt(e)) {
+    if (now > pool.lastRewardTime && total.gt(0)) {
       const multiplier = this._getMultiplier(pool.lastRewardTime, now);
       const totalAlloc = this._getTotalAlloc();
       const reward = new BigNumber(multiplier).times(pool.alloc).div(totalAlloc);
@@ -374,13 +376,15 @@ class Farm {
         extraPending: "0",
         extraDebt: "0"
       }
+
+      return "0";
     }
 
-    const accPerShareExtra = new BigNumber(pool.accPerShareExtra);
+    var accPerShareExtra = new BigNumber(pool.accPerShareExtra);
     const total = new BigNumber(pool.total);
     const now = Math.floor(tx.time / 1e9);
 
-    if (now > pool.lastRewardTime && total.gt(e)) {
+    if (now > pool.lastRewardTime && total.gt(0)) {
       const extraAmount = blockchain.callWithAuth(this._getExtra(), "get", [pool.extra])[0];
       accPerShareExtra = accPerShareExtra.plus(extraAmount).div(total);
     }
@@ -422,8 +426,8 @@ class Farm {
     const userAmount = new BigNumber(userInfo[token].amount);
 
     if (userAmount.gt(0)) {
-      userInfo[token].rewardPending = userAmount.times(pool.accPerShare).minus(userInfo[token].rewardDebt);
-      userInfo[token].extraPending = userAmount.times(pool.accPerShareExtra).minus(userInfo[token].extraDebt);
+      userInfo[token].rewardPending = userAmount.times(pool.accPerShare).minus(userInfo[token].rewardDebt).toFixed(XG_PRECISION, ROUND_DOWN);
+      userInfo[token].extraPending = userAmount.times(pool.accPerShareExtra).minus(userInfo[token].extraDebt).toFixed(pool.extraPrecision, ROUND_DOWN);
     }
 
     blockchain.callWithAuth("token.iost", "transfer",
@@ -433,11 +437,12 @@ class Farm {
            amountStr,
            "deposit"]);
 
-    userInfo[token].rewardDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION);
-    userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.precision);
+    userInfo[token].amount = userAmount.plus(amountStr).toFixed(pool.tokenPrecision, ROUND_DOWN);
+    userInfo[token].rewardDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
+    userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision, ROUND_DOWN);
     this._setUserInfo(tx.publisher, userInfo);
 
-    pool.total = new BigNumber(pool.total).plus(amount).toFixed(pool.tokenPrecision);
+    pool.total = new BigNumber(pool.total).plus(amount).toFixed(pool.tokenPrecision, ROUND_DOWN);
     this._setPoolObj(token, pool);
 
     blockchain.receipt(JSON.stringify(["deposit", token, amountStr]));
@@ -460,13 +465,13 @@ class Farm {
     this.updatePool(token);
 
     const userAmount = new BigNumber(userInfo[token].amount);
-    const userAmountStr = userAmount.toFixed(pool.tokenPrecision);
+    const userAmountStr = userAmount.toFixed(pool.tokenPrecision, ROUND_DOWN);
     const pending = userAmount.times(pool.accPerShare).plus(
         userInfo[token].rewardPending).minus(userInfo[token].rewardDebt);
-    const pendingStr = pending.toFixed(XG_PRECISION);
+    const pendingStr = pending.toFixed(XG_PRECISION, ROUND_DOWN);
     const extraPending = userAmount.times(pool.accPerShareExtra).plus(
         userInfo[token].extraPending).minus(userInfo[token].extraDebt);
-    const extraPendingStr = extraPending.toFixed(pool.extraPresicion);
+    const extraPendingStr = extraPending.toFixed(pool.extraPresicion, ROUND_DOWN);
 
     if (pending.gt(0)) {
       blockchain.callWithAuth("token.iost", "transfer",
@@ -495,11 +500,11 @@ class Farm {
            userAmountStr,
            "deposit"]);
     userInfo[token].amount = "0";
-    userInfo[token].rewareDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION);
-    userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision);
+    userInfo[token].rewareDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
+    userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision, ROUND_DOWN);
     this._setUserInfo(tx.publisher, userInfo);
 
-    pool.total = new BigNumber(pool.total).minus(userAmount).toFixed(pool.tokenPrecision);
+    pool.total = new BigNumber(pool.total).minus(userAmount).toFixed(pool.tokenPrecision, ROUND_DOWN);
     this._setPoolObj(token, pool);
 
     blockchain.receipt(JSON.stringify(["withdraw", token, pendingStr, extraPendingStr, userAmountStr]));
@@ -524,10 +529,10 @@ class Farm {
     const userAmount = new BigNumber(userInfo[token].amount);
     const pending = userAmount.times(pool.accPerShare).plus(
         userInfo[token].rewardPending).minus(userInfo[token].rewardDebt);
-    const pendingStr = pending.toFixed(XG_PRECISION);
+    const pendingStr = pending.toFixed(XG_PRECISION, ROUND_DOWN);
     const extraPending = userAmount.times(pool.accPerShareExtra).plus(
         userInfo[token].extraPending).minus(userInfo[token].extraDebt);
-    const extraPendingStr = extraPending.toFixed(pool.extraPresicion);
+    const extraPendingStr = extraPending.toFixed(pool.extraPresicion, ROUND_DOWN);
 
     if (pending.gt(0)) {
       blockchain.callWithAuth("token.iost", "transfer",
@@ -549,8 +554,8 @@ class Farm {
       userInfo[token].extraPending = "0";
     }
 
-    userInfo[token].rewareDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION);
-    userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision);
+    userInfo[token].rewareDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
+    userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision, ROUND_DOWN);
     this._setUserInfo(tx.publisher, userInfo);
 
     blockchain.receipt(JSON.stringify(["claim", token, pendingStr, extraPendingStr]));
