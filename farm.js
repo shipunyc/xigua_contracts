@@ -205,6 +205,7 @@ class Farm {
     this._applyDeltaToTotalAlloc(alloc);
 
     storage.mapPut("pool", token, JSON.stringify({
+      total: "0",
       tokenPrecision: this._checkPrecision(token),
       extra: extra,
       extraPrecision: extra ? this._checkPrecision(extra) : 0,
