@@ -27,12 +27,13 @@
   //   4. User's `rewardDebt` gets updated.
 }
 
-# allPoolIds
+# tokenArray
 
 # totalAlloc
 
 # pool
 [token] => {
+  total: "0", // How many tokens all users staked
   tokenPrecision: 0,
   extra: "",  // The extra token to mine besides XG, can be empty
   extraPrecision: 0,
@@ -269,8 +270,7 @@ class Farm {
       return;
     }
 
-    const total = new BigNumber(blockchain.call(
-        "token.iost", "balanceOf", [token, blockchain.contractName()])[0]);
+    const total = new BigNumber(pool.total);
 
     if (total.eq(0)) {
       pool.lastRewardTime = now;
@@ -337,8 +337,8 @@ class Farm {
     }
 
     const accPerShare = new BigNumber(pool.accPerShare);
-    const total = new BigNumber(blockchain.call(
-        "token.iost", "balanceOf", [token, blockchain.contractName()])[0]);   
+    const total = new BigNumber(pool.total);
+
     const now = Math.floor(tx.time / 1e9);
 
     if (now > pool.lastRewardTime && total.gt(e)) {
@@ -377,8 +377,7 @@ class Farm {
     }
 
     const accPerShareExtra = new BigNumber(pool.accPerShareExtra);
-    const total = new BigNumber(blockchain.call(
-        "token.iost", "balanceOf", [token, blockchain.contractName()])[0]);
+    const total = new BigNumber(pool.total);
     const now = Math.floor(tx.time / 1e9);
 
     if (now > pool.lastRewardTime && total.gt(e)) {
@@ -438,6 +437,9 @@ class Farm {
     userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.precision);
     this._setUserInfo(tx.publisher, userInfo);
 
+    pool.total = new BigNumber(pool.total).plus(amount).toFixed(pool.tokenPrecision);
+    this._setPoolObj(token, pool);
+
     blockchain.receipt(JSON.stringify(["deposit", token, amountStr]));
   }
 
@@ -496,6 +498,9 @@ class Farm {
     userInfo[token].rewareDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION);
     userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision);
     this._setUserInfo(tx.publisher, userInfo);
+
+    pool.total = new BigNumber(pool.total).minus(userAmount).toFixed(pool.tokenPrecision);
+    this._setPoolObj(token, pool);
 
     blockchain.receipt(JSON.stringify(["withdraw", token, pendingStr, extraPendingStr, userAmountStr]));
   }
