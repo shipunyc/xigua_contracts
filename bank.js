@@ -105,7 +105,7 @@ class Bank {
     return storage.get("extra") || '';
   }
 
-  setExtra(feeTo) {
+  setFeeTo(feeTo) {
     this._requireOwner();
 
     storage.put("feeTo", feeTo);
@@ -539,11 +539,11 @@ class Bank {
     }
 
     const amountToInflate = reserveXUSD.div(100);
+
     blockchain.callWithAuth("token.iost", "issue",
         ["xusd",
          blockchain.contractName(),
-         amountToInflate,
-         "inflate"]);
+         amountToInflate]);
     const path = JSON.stringify(["xusd", "iost"]);
 
     const amounts = JSON.parse(blockchain.callWithAuth(
@@ -611,8 +611,7 @@ class Bank {
     blockchain.callWithAuth("token.iost", "destroy",
         ["xusd",
          blockchain.contractName(),
-         boughtXUSDStr,
-         "deflate"]);
+         boughtXUSDStr]);
 
     // Updates inflationData.
 

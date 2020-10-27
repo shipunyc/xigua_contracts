@@ -2,7 +2,7 @@
 
 const VOST_PRECISION = 8;
 const XUSD_PRECISION = 6;
-const MINIMUM_VOST_UNIT = 100;
+const MINIMUM_VOST_UNIT = 20;
 const ROUND_DOWN = 1;
 const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
@@ -107,12 +107,11 @@ class Extra {
 
     for (let i = 0; i < queue.length; ++i) {
       const time = Math.min(now, queue[i].startTime + 3600 * 24);
+      const lastTimeI = Math.max(lastTime, queue[i].startTime);
       const amount = new BigNumber(queue[i].delta).times(
-          time - lastTime).div(3600 * 24);
+          time - lastTimeI).div(3600 * 24);
       amountToSwap = amountToSwap.plus(amount);
     }
-
-    this._setLastTime(now);
 
     const oldBalance = this._getBalance();
     const newBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
@@ -126,6 +125,8 @@ class Extra {
         startTime: now,
         delta: delta.toFixed(VOST_PRECISION, ROUND_DOWN)
       });
+
+      this._setBalance(newBalance);
     }
 
     // Queue out
@@ -144,6 +145,8 @@ class Extra {
     if (amountToSwap.lt(MINIMUM_VOST_UNIT)) {
       return "0";
     }
+
+    this._setLastTime(now);
 
     // Now convert sum of vost into xusd, and send to farm.
 

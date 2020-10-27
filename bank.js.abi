@@ -29,7 +29,15 @@
             "description": ""
         },
         {
-            "name": "setExtra",
+            "name": "setRouter",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "setSwap",
             "args": [
                 "string"
             ],
@@ -38,6 +46,14 @@
         },
         {
             "name": "setExtra",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "setFeeTo",
             "args": [
                 "string"
             ],
@@ -168,6 +184,18 @@
             "args": [
                 "string"
             ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "inflate",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "deflate",
+            "args": [],
             "amountLimit": [],
             "description": ""
         },

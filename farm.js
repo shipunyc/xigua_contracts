@@ -45,11 +45,11 @@
 
 */
 
-const START_TIME = 1603800000;  // 2020/10/27 12pm UTC (Beijing 8pm)
+const START_TIME = 1603800000 + 7200;  // 2020/10/27 12pm UTC (Beijing 8pm)
 const XG_PER_DAY_BONUS = 50000;
-const BONUS_END_TIME = 1607256000;  // 40 days after START_TIME
+const BONUS_END_TIME = 1607256000 + 7200;  // 40 days after START_TIME
 const XG_PER_DAY_REGULAR = 10000;
-const ALL_END_TIME = 1624536000;  // 200 days after BONUS_END_TIME
+const ALL_END_TIME = 1624536000 + 7200;  // 200 days after BONUS_END_TIME
 
 const XG_PRECISION = 6;
 const ROUND_DOWN = 1;
@@ -243,6 +243,9 @@ class Farm {
   }
 
   _getMultiplier(fromTime, toTime) {
+    fromTime = Math.max(fromTime, START_TIME);
+    toTime = Math.min(toTime, ALL_END_TIME);
+
     if (toTime <= START_TIME || fromTime >= ALL_END_TIME) {
       return 0;
     }
@@ -259,12 +262,7 @@ class Farm {
         new BigNumber(XG_PER_DAY_REGULAR).times(toTime - BONUS_END_TIME)).div(3600 * 24);
   }
 
-  updatePool(token) {
-    if (!this._hasPool(token)) {
-      throw "Xigua: NO_POOL_FOR_TOKEN";
-    }
-
-    const pool = this._getPool(token);
+  _updatePool(token, pool) {
     const now = Math.floor(tx.time / 1e9);
 
     if (now <= pool.lastRewardTime) {
@@ -302,14 +300,27 @@ class Farm {
 
     if (pool.extra) {
       const extraAmount = new BigNumber(blockchain.callWithAuth(this._getExtra(), "takeExtra", [pool.extra])[0]);
+
       pool.accPerShareExtra = new BigNumber(pool.accPerShareExtra).plus(
           extraAmount.div(total)).toFixed(pool.extraPrecision, ROUND_DOWN);
+
+      blockchain.receipt(JSON.stringify(["extra", pool.accPerShareExtra, total.toString(), extraAmount.toFixed(pool.extraPrecision)]));
     }
 
     // 3) Done.
 
     pool.lastRewardTime = now;
     this._setPoolObj(token, pool);
+  }
+
+  updatePool(token) {
+    if (!this._hasPool(token)) {
+      throw "Xigua: NO_POOL_FOR_TOKEN";
+    }
+
+    const pool = this._getPool(token);
+
+    this._updatePool(token, pool);
   }
 
   updateAllPools() {
@@ -422,7 +433,7 @@ class Farm {
       }
     }
 
-    this.updatePool(token);
+    this._updatePool(token, pool);
 
     const userAmount = new BigNumber(userInfo[token].amount);
 
@@ -454,7 +465,7 @@ class Farm {
       throw "Xigua: NO_POOL_FOR_TOKEN";
     }
 
-    const pool = this._getPool(token);
+    var pool = this._getPool(token);
 
     const userInfo = this._getUserInfo(tx.publisher);
 
@@ -463,7 +474,7 @@ class Farm {
       return;
     }
 
-    this.updatePool(token);
+    this.updatePool(_token, pool);
 
     const userAmount = new BigNumber(userInfo[token].amount);
     const userAmountStr = userAmount.toFixed(pool.tokenPrecision, ROUND_DOWN);
@@ -525,7 +536,7 @@ class Farm {
       return;
     }
 
-    this.updatePool(token);
+    this._updatePool(token, pool);
 
     const userAmount = new BigNumber(userInfo[token].amount);
     const pending = userAmount.times(pool.accPerShare).plus(
