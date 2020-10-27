@@ -45,11 +45,11 @@
 
 */
 
-const START_TIME = 1603800000 + 7200;  // 2020/10/27 12pm UTC (Beijing 8pm)
+const START_TIME = 1603800000 + 10800;  // 2020/10/27 3pm UTC (Beijing 11pm)
 const XG_PER_DAY_BONUS = 50000;
-const BONUS_END_TIME = 1607256000 + 7200;  // 40 days after START_TIME
+const BONUS_END_TIME = 1607256000 + 10800;  // 40 days after START_TIME
 const XG_PER_DAY_REGULAR = 10000;
-const ALL_END_TIME = 1624536000 + 7200;  // 200 days after BONUS_END_TIME
+const ALL_END_TIME = 1624536000 + 10800;  // 200 days after BONUS_END_TIME
 
 const XG_PRECISION = 6;
 const ROUND_DOWN = 1;
@@ -359,7 +359,7 @@ class Farm {
       const multiplier = this._getMultiplier(pool.lastRewardTime, now);
       const totalAlloc = this._getTotalAlloc();
       const reward = new BigNumber(multiplier).times(pool.alloc).div(totalAlloc);
-      accPerShare = accPerShare.plus(reward).div(total);
+      accPerShare = accPerShare.plus(reward.div(total));
     }
 
     return accPerShare.times(userInfo[token].amount).plus(
@@ -398,7 +398,7 @@ class Farm {
 
     if (now > pool.lastRewardTime && total.gt(0)) {
       const extraAmount = blockchain.callWithAuth(this._getExtra(), "get", [pool.extra])[0];
-      accPerShareExtra = accPerShareExtra.plus(extraAmount).div(total);
+      accPerShareExtra = accPerShareExtra.plus(extraAmount.div(total));
     }
 
     return accPerShareExtra.times(userInfo[token].amount).plus(
@@ -435,7 +435,7 @@ class Farm {
 
     this._updatePool(token, pool);
 
-    const userAmount = new BigNumber(userInfo[token].amount);
+    var userAmount = new BigNumber(userInfo[token].amount);
 
     if (userAmount.gt(0)) {
       userInfo[token].rewardPending = userAmount.times(pool.accPerShare).minus(userInfo[token].rewardDebt).toFixed(XG_PRECISION, ROUND_DOWN);
@@ -449,7 +449,8 @@ class Farm {
            amountStr,
            "deposit"]);
 
-    userInfo[token].amount = userAmount.plus(amountStr).toFixed(pool.tokenPrecision, ROUND_DOWN);
+    userAmount = userAmount.plus(amountStr);
+    userInfo[token].amount = userAmount.toFixed(pool.tokenPrecision, ROUND_DOWN);
     userInfo[token].rewardDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
     userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision, ROUND_DOWN);
     this._setUserInfo(tx.publisher, userInfo);
@@ -512,8 +513,8 @@ class Farm {
            userAmountStr,
            "deposit"]);
     userInfo[token].amount = "0";
-    userInfo[token].rewareDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
-    userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision, ROUND_DOWN);
+    userInfo[token].rewardDebt = "0";
+    userInfo[token].extraDebt = "0";
     this._setUserInfo(tx.publisher, userInfo);
 
     pool.total = new BigNumber(pool.total).minus(userAmount).toFixed(pool.tokenPrecision, ROUND_DOWN);
@@ -566,7 +567,7 @@ class Farm {
       userInfo[token].extraPending = "0";
     }
 
-    userInfo[token].rewareDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
+    userInfo[token].rewardDebt = userAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
     userInfo[token].extraDebt = userAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision, ROUND_DOWN);
     this._setUserInfo(tx.publisher, userInfo);
 
