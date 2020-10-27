@@ -474,7 +474,7 @@ class Farm {
       return;
     }
 
-    this.updatePool(_token, pool);
+    this._updatePool(token, pool);
 
     const userAmount = new BigNumber(userInfo[token].amount);
     const userAmountStr = userAmount.toFixed(pool.tokenPrecision, ROUND_DOWN);
