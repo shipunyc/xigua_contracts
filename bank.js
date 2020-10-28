@@ -270,6 +270,27 @@ class Bank {
     return info;
   }
 
+  unlockWithVOST(iostAmount) {
+    iostAmount = new BigNumber(iostAmount);
+    const iostAmountStr = iostAmount.toFixed(IOST_PRECISION, ROUND_DOWN);
+    iostAmount = new BigNumber(iostAmountStr);
+
+    const info = this._unlockInternal(iostAmount);
+
+    blockchain.callWithAuth("token.iost", "transfer",
+        ["vost",
+         blockchain.contractName(),
+         tx.publisher,
+         iostAmountStr,
+         "unlock with vost"]);
+
+    blockchain.receipt(JSON.stringify(["unlockWithVOST",
+        tx.publisher,
+        iostAmountStr,
+        info.locked,
+        info.borrowed]));
+  }
+
   unlockWithDelay(iostAmount) {
     iostAmount = new BigNumber(iostAmount);
     const iostAmountStr = iostAmount.toFixed(IOST_PRECISION, ROUND_DOWN);
