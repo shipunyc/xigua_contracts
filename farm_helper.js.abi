@@ -29,7 +29,7 @@
             "description": ""
         },
         {
-            "name": "setFeeTo",
+            "name": "setFarm",
             "args": [
                 "string"
             ],
@@ -37,7 +37,7 @@
             "description": ""
         },
         {
-            "name": "setListingFee",
+            "name": "setMain",
             "args": [
                 "string"
             ],
@@ -45,22 +45,13 @@
             "description": ""
         },
         {
-            "name": "getPair",
-            "args": [
-                "string",
-                "string"
-            ],
-            "amountLimit": [],
-            "description": ""
-        },
-        {
-            "name": "allPairs",
+            "name": "updatePools",
             "args": [],
             "amountLimit": [],
             "description": ""
         },
         {
-            "name": "createPair",
+            "name": "deposit",
             "args": [
                 "string",
                 "string"
@@ -72,61 +63,23 @@
             "description": ""
         },
         {
-            "name": "mint",
+            "name": "withdraw",
             "args": [
-                "string",
-                "string",
-                "string",
-                "string",
                 "string"
             ],
-            "amountLimit": [{
-                "token": "*",
-                "val": "unlimited"
-            }],
-            "description": ""
-        },
-        {
-            "name": "burn",
-            "args": [
-                "string",
-                "string",
-                "string",
-                "string",
-                "string"
-            ],
-            "amountLimit": [{
-                "token": "*",
-                "val": "unlimited"
-            }],
-            "description": ""
-        },
-        {
-            "name": "swap",
-            "args": [
-                "string",
-                "string",
-                "string",
-                "string",
-                "string",
-                "string",
-                "string",
-                "string"
-            ],
-            "amountLimit": [{
-                "token": "*",
-                "val": "unlimited"
-            }],
-            "description": ""
-        },
-        {
-            "name": "skimAll",
-            "args": [],
             "amountLimit": [],
             "description": ""
         },
         {
-            "name": "skim",
+            "name": "vote",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "unvote",
             "args": [
                 "string"
             ],

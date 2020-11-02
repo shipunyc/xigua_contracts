@@ -45,6 +45,15 @@
             "description": ""
         },
         {
+            "name": "getUserTokenInfo",
+            "args": [
+                "string",
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
             "name": "addPool",
             "args": [
                 "string",

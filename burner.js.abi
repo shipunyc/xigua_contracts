@@ -37,6 +37,23 @@
             "description": ""
         },
         {
+            "name": "setSwap",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "removeLiquidity",
+            "args": [
+                "string",
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
             "name": "swapTokenToXGAndBurn",
             "args": [
                 "string"

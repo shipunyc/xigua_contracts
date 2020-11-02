@@ -2,7 +2,7 @@
 
 const VOST_PRECISION = 8;
 const XUSD_PRECISION = 6;
-const MINIMUM_VOST_UNIT = 20;
+const MINIMUM_VOST_UNIT = 1000;
 const ROUND_DOWN = 1;
 const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
 
@@ -66,7 +66,7 @@ class Extra {
   }
 
   _setBalance(balanceStr) {
-    storage.put("balance", balanceStr);
+    storage.put("balance", balanceStr.toString());
   }
 
   _getBalance() {
@@ -126,11 +126,11 @@ class Extra {
         delta: delta.toFixed(VOST_PRECISION, ROUND_DOWN)
       });
 
-      this._setBalance(newBalance);
+      this._setBalance(newBalance.toFixed(VOST_PRECISION, ROUND_DOWN));
     }
 
     // Queue out
-    if (queue[0] && now >= queue[0].startTime + 24 * 3600) {
+    if (queue[0] && lastTime >= queue[0].startTime + 24 * 3600) {
       queue.shift();
     }
 

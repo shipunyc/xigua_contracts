@@ -9,7 +9,7 @@ class Burner {
   }
 
   can_update(data) {
-    return blockchain.requireAuth(blockchain.contractOwner(), "active") && !this.isLocked();
+    return blockchain.requireAuth(blockchain.contractOwner(), 'active') && !this.isLocked();
   }
 
   _requireOwner() {
@@ -20,15 +20,15 @@ class Burner {
 
   isLocked() {
     const now = Math.floor(tx.time / 1e9);
-    const status = +storage.get("timeLockStatus") || 0;
-    const until = +storage.get("timeLockUntil") || 0;
+    const status = +storage.get('timeLockStatus') || 0;
+    const until = +storage.get('timeLockUntil') || 0;
     return status == 1 || now < until;
   }
 
   startTimeLock() {
     this._requireOwner();
 
-    storage.put("timeLockStatus", "1");
+    storage.put('timeLockStatus', '1');
   }
 
   stopTimeLock() {
@@ -36,54 +36,76 @@ class Burner {
 
     const now = Math.floor(tx.time / 1e9);
 
-    storage.put("timeLockUntil", (now + TIME_LOCK_DURATION).toString());
-    storage.put("timeLockStatus", "0")
+    storage.put('timeLockUntil', (now + TIME_LOCK_DURATION).toString());
+    storage.put('timeLockStatus', '0')
   }
 
   setRouter(router) {
     this._requireOwner();
 
-    storage.put("router", router);
+    storage.put('router', router);
   }
 
   _getRouter() {
-    return storage.get("router") || '';
+    return storage.get('router') || '';
   }
 
-  swapTokenToXGAndBurn(token) {
+  setSwap(swap) {
+    this._requireOwner();
+
+    storage.put('swap', swap);
+  }
+
+  _getSwap() {
+    return storage.get('swap') || '';
+  }
+
+  _checkPrecision(symbol) {
+    return +storage.globalMapGet("token.iost", "TI" + symbol, "decimal") || 0;
+  }
+
+  _swapAToB(tokenA, tokenB) {
     const pathArray = [];
-    if (token == "iost") {
-      pathArray.push(['iost', 'xg']);
-      pathArray.push(['iost', 'xusd', 'xg']);
-    } else if (token == "xusd") {
-      pathArray.push(['xusd', 'xg']);
-      pathArray.push(['xusd', 'iost', 'xg']);
+    if (tokenA == 'iost') {
+      pathArray.push([tokenA, tokenB]);
+      if (tokenB != 'xusd') {
+        pathArray.push([tokenA, 'xusd', tokenB]);
+      }
+    } else if (tokenA == 'xusd') {
+      pathArray.push([tokenA, tokenB]);
+      if (tokenB != 'iost') {
+        pathArray.push([tokenA, 'iost', tokenB]);
+      }
     } else {
-      pathArray.push([token, 'xg']);
-      pathArray.push([token, 'iost', 'xg']);
-      pathArray.push([token, 'xusd', 'xg']);
+      pathArray.push([tokenA, tokenB]);
+      if (tokenB != 'iost') {
+        pathArray.push([tokenA, 'iost', tokenB]);
+      }
+      if (tokenB != 'xusd') {
+        pathArray.push([tokenA, 'xusd', tokenB]);
+      }
     }
 
     const amountIn = new BigNumber(blockchain.call(
-        "token.iost",
-        "balanceOf",
-        [token, blockchain.contractName()])[0]);
+        'token.iost',
+        'balanceOf',
+        [tokenA, blockchain.contractName()])[0]);
 
     if (amountIn.eq(0)) {
       return;
     }
 
-    const precision = this._checkPrecision(token);
+    const precision = this._checkPrecision(tokenA);
 
-    var bestPath = "";
+    var bestPath = '';
     var bestReturn = new BigNumber(0);
 
     for (let i = 0; i < pathArray.length; ++i) {
       const pathStr = JSON.stringify(pathArray[i]);
-      const hasPath = +blockchain.call(this._getRouter(), "hasPath", [pathStr])[0];
+      const hasPath = +blockchain.call(this._getRouter(), 'hasPath', [pathStr])[0];
       if (hasPath) {
         const amounts = JSON.parse(blockchain.call(
-            this._getRouter(), "getAmountsOut", [amountIn.toFixed(precision, ROUND_DOWN), pathStr])[0]);
+            this._getRouter(), 'getAmountsOut', [amountIn.toFixed(precision, ROUND_DOWN), pathStr])[0]);
         if (!bestPath || bestReturn.lt(amounts[amounts.length - 1])) {
           bestPath = pathStr;
           bestReturn = new BigNumber(amounts[amounts.length - 1]);
@@ -93,22 +115,46 @@ class Burner {
 
     blockchain.callWithAuth(
         this._getRouter(),
-        "swapExactTokensForTokens",
+        'swapExactTokensForTokens',
         [amountIn.toFixed(precision, ROUND_DOWN),
          bestReturn.times(0.99).toFixed(precision, ROUND_DOWN),  // slippage 1%
          bestPath,
          blockchain.contractName()]);
+  }
+
+  removeLiquidity(tokenA, tokenB) {
+    this._requireOwner();
+
+    const pair = JSON.parse(blockchain.call(this._getSwap(), 'getPair', [tokenA, tokenB])[0]);
+    const liquidity = blockchain.call('token.iost', 'balanceOf', [pair.xlp, blockchain.contractName()])[0];
+
+    blockchain.callWithAuth(this._getSwap(), 'burn', [
+        tokenA, tokenB, liquidity, blockchain.contractName(), blockchain.contractName()]);
+
+    if (['xg','xusd','iost','vost'].indexOf(tokenA) < 0) {
+      this._swapAToB(tokenA, 'xusd');
+    }
+
+    if (['xg','xusd','iost','vost'].indexOf(tokenB) < 0) {
+      this._swapAToB(tokenB, 'xusd');
+    }
+  }
+
+  swapTokenToXGAndBurn(token) {
+    this._requireOwner();
+
+    this._swapAToB(token, 'xg');
 
     // Now burn all xg.
     const xgBalanceStr = blockchain.call(
-        "token.iost", 
-        "balanceOf", 
-        ["xg", blockchain.contractName()]);
+        'token.iost', 
+        'balanceOf', 
+        ['xg', blockchain.contractName()]);
 
     blockchain.callWithAuth(
-        "token.iost",
-        "destroy",
-        ["xg", blockchain.contractName(), xgBalanceStr]);
+        'token.iost',
+        'destroy',
+        ['xg', blockchain.contractName(), xgBalanceStr]);
   }
 }
 

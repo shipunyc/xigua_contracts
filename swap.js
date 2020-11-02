@@ -280,7 +280,8 @@ class Swap {
           const numerator = rootK.minus(rootKLast).times(totalSupply);
           const denominator = rootK.times(5).plus(rootKLast);
           const liquidity = numerator.div(denominator);
-          if (liquidity.gt(0)) {
+          const liquidityStr = liquidity.toFixed(UNIVERSAL_PRECISION, ROUND_DOWN);
+          if (new BigNumber(liquidityStr).gt(0)) {
             this._mint(pair.xlp, feeTo, liquidity);
           }
         }
@@ -373,7 +374,7 @@ class Swap {
     return liquidity;
   }
 
-  burn(tokenA, tokenB, liquidity, toAddress) {
+  burn(tokenA, tokenB, liquidity, fromAddress, toAddress) {
     liquidity = new BigNumber(liquidity);
 
     if (liquidity.lt(UNIT_LIQUIDITY)) {
@@ -398,7 +399,7 @@ class Swap {
       throw 'Xigua: INSUFFICIENT_LIQUIDITY_BURNED';
     }
 
-    this._burn(pair.xlp, tx.publisher, liquidity);
+    this._burn(pair.xlp, fromAddress, liquidity);
 
     blockchain.callWithAuth("token.iost", "transfer",
         [pair.token0,

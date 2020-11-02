@@ -88,7 +88,7 @@ class Router {
       reserveB = new BigNumber(pair.reserve0);
     }
 
-    if (reserveA.eq(0) && reserveB.eq(0)) {
+    if (reserveA.eq(0) || reserveB.eq(0)) {
       return [amountADesired, amountBDesired];
     } else {
       const amountBOptimal = this._quote(amountADesired, reserveA, reserveB);
@@ -194,7 +194,7 @@ class Router {
     }
 
     const amountArray = JSON.parse(blockchain.call(
-        this._getSwap(), "burn", [tokenA, tokenB, liquidity.toString(), toAddress])[0]);
+        this._getSwap(), "burn", [tokenA, tokenB, liquidity.toString(), JSON.parse(blockchain.contextInfo()).caller.name, toAddress])[0]);
     const amountA = new BigNumber(amountArray[0]);
     const amountB = new BigNumber(amountArray[1]);
 
