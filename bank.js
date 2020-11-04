@@ -658,15 +658,15 @@ class Bank {
     const realBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", ["vost", blockchain.contractName()])[0]);
 
     if (realBalance.gt(balance)) {
-      const extraAmount = realBalance.minus(balance).times(0.9);
-      const feeAmount = realBalance.minus(balance).times(0.1);
+      //const extraAmount = realBalance.minus(balance).times(0.9);
+      const feeAmount = realBalance.minus(balance).times(1);
 
-      blockchain.callWithAuth("token.iost", "transfer",
-          ["vost",
-           blockchain.contractName(),
-           this._getExtra() || tx.publisher,
-           extraAmount.toFixed(VOST_PRECISION, ROUND_DOWN),
-           "skim"]);
+      //blockchain.callWithAuth("token.iost", "transfer",
+      //    ["vost",
+      //     blockchain.contractName(),
+      //     this._getExtra() || tx.publisher,
+      //     extraAmount.toFixed(VOST_PRECISION, ROUND_DOWN),
+      //     "skim"]);
 
       blockchain.callWithAuth("token.iost", "transfer",
           ["vost",
