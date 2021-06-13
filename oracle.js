@@ -87,6 +87,8 @@ class Oracle {
     const tid = Math.floor(now / 60) % TOTAL_MINUTES;
 
     storage.mapPut(exchange + "_price", tid.toString(), (+price).toFixed(6));
+
+    return tid;
   }
 
   getPrice(exchange, tid) {

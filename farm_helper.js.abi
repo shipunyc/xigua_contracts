@@ -37,14 +37,6 @@
             "description": ""
         },
         {
-            "name": "setMain",
-            "args": [
-                "string"
-            ],
-            "amountLimit": [],
-            "description": ""
-        },
-        {
             "name": "addProposal",
             "args": [
                 "string",
@@ -90,6 +82,12 @@
         },
         {
             "name": "updatePools",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "resetTotalVotes",
             "args": [],
             "amountLimit": [],
             "description": ""

@@ -409,6 +409,14 @@ class Bank {
         info.borrowed]));
   }
 
+  mintByAdmin(xusdAmountStr) {
+    this._requireOwner();
+
+    // Now let's mint some xusd. Please make sure there are enough HUSD as backup.
+    blockchain.callWithAuth("token.iost", "issue",
+        ["xusd", tx.publisher, xusdAmountStr]);
+  }
+
   startLiquidation(who) {
     const info = this.getInfo(who);
 
@@ -430,8 +438,7 @@ class Bank {
     blockchain.callWithAuth("token.iost", "destroy",
         ["xusd",
          tx.publisher,
-         info.borrowed,
-         "start liquidation"]);
+         info.borrowed]);
 
     const now = Math.floor(tx.time / 1e9);
 
@@ -471,26 +478,21 @@ class Bank {
       throw "Xigua: not your hash";
     }
 
-    const now = Math.floor(tx.time / 1e9);
-
-    if (now < liquidation.time + 3600 * 24 * 3) {
-      throw "Xigua: wait 3 days";
-    }
-
-    // Now you are good to go.
-
     liquidation.finished = 1;
     this._setLiquidation(hash, liquidation);
 
-    const info = this.getInfo(tx.publisher) || {locked: "0", borrowed: "0"};
-    info.locked = new BigNumber(info.locked).plus(liquidation.locked).toFixed(IOST_PRECISION, ROUND_DOWN);
-    this._setInfo(tx.publisher, info);
+    blockchain.callWithAuth("token.iost", "transfer",
+        ["vost",
+         blockchain.contractName(),
+         tx.publisher,
+         liquidation.locked,
+         "liquidation"]);
 
     blockchain.receipt(JSON.stringify(["finishLiquidation",
        tx.publisher,
        hash,
-       info.locked,
-       info.borrowed]));
+       liquidation.locked,
+       liquidation.borrowed]));
   }
 
   cancelLiquidation(hash) {
@@ -531,6 +533,18 @@ class Bank {
 
   _setInflationData(data) {
     storage.put("inflationData", JSON.stringify(data));
+  }
+
+  withdrawIOST() {
+    this._requireOwner();
+
+    const iostBalanceStr = blockchain.call("token.iost", "balanceOf", ["iost", blockchain.contractName()])[0];
+    blockchain.callWithAuth("token.iost", "transfer",
+        ["iost",
+         blockchain.contractName(),
+         tx.publisher,
+         iostBalanceStr,
+         "by admin"]);
   }
 
   inflate() {
@@ -590,6 +604,8 @@ class Bank {
     if (new BigNumber(price).eq(0)) {
       throw "Xigua: oracle error";
     }
+
+    const pair = JSON.parse(blockchain.call(this._getSwap(), "getPair", ["iost", "xusd"])[0]);
 
     const reserveIOST = new BigNumber(pair.reserve0);
     const reserveXUSD = new BigNumber(pair.reserve1);

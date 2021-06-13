@@ -45,7 +45,20 @@
             "description": ""
         },
         {
-            "name": "getUserTokenInfo",
+            "name": "getCanUnlock",
+            "args": [
+                "string",
+                "string",
+                "string",
+                "string",
+                "string",
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "getUserTokenAmount",
             "args": [
                 "string",
                 "string"
@@ -70,6 +83,14 @@
                 "string",
                 "string",
                 "string",
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "getPool",
+            "args": [
                 "string"
             ],
             "amountLimit": [],

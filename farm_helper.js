@@ -7,7 +7,10 @@
 #vote
 [token] => 0
 
-#userToken
+#userToken  // vote with xg liquidity [DEPRECATED]
+[user] => token
+
+#userTokenXG  // vote with xg
 [user] => token
 
 #proposal
@@ -31,20 +34,28 @@
 
 const UNIVERSAL_PRECISION = 12;
 const TOKEN_WHITE_LIST = [
-['guild_token', 'xlp1603183198330', '0'],
-['idt', 'xlp1603943943842', '0'],
-['lol', 'xlp1603126828720', '0'],
-['metx', 'xlp1603713983453', '0'],
-['otbc', 'xlp1603292350826', '0'],
-['xusd', 'xusd', '2'],
-['zs', 'xlp1603126720057', '1'],
-['ppt', 'xlp1603126734507', '2'],
-['tpt', 'xlp1603126793694', '1'],
-['iost', 'xlp1603017606495', '4'],
-['vost', 'xlp1603126749670', '3'],
-['xg', 'xlp1603126781817', '25']
+['idt', 'xlp1603943943842', 0],
+['lol', 'xlp1603126828720', 0],
+['metx', 'xlp1603713983453', 1],
+['otbc', 'xlp1603292350826', 0],
+['xusd', 'xusd', 10],
+['zs', 'xlp1603126720057', 0.5],
+['bhh', 'xlp1609552484620', 0.5],
+['don', 'xlp1614958673725', 0.5],
+['husd', 'xlp1611291717081', 10],
+['ppt', 'xlp1603126734507', 1],
+['tpt', 'xlp1603126793694', 1],
+['iost', 'xlp1603017606495', 4],
+['vost', 'xlp1603126749670', 3],
+['xg', 'xlp1603126781817', 1],
+['xg_3', 'xg_3', 1],
+['xg_30', 'xg_30', 3],
+['xg_90', 'xg_90', 6],
+['xg_180', 'xg_180', 14]
 ];
+
 const ROUND_DOWN = 1;
+const XG_LIST = ['xg_3', 'xg_30', 'xg_90', 'xg_180'];
 
 class FarmHelper {
   init() {
@@ -99,24 +110,12 @@ class FarmHelper {
     return storage.get("farm");
   }
 
-  // The main voting token.
-  setMain(main) {
-    this._requireOwner();
-    this._requireUnlocked();
-
-    storage.put("main", main);
-  }
-
-  _getMain() {
-    return storage.get("main");
-  }
-
   _setUserToken(who, token) {
-    storage.mapPut("userToken", who, token);
+    storage.mapPut("userTokenXG", who, token);
   }
 
   _getUserToken(who) {
-    return storage.mapGet("userToken", who) || "";
+    return storage.mapGet("userTokenXG", who) || "";
   }
 
   _getVote(token) {
@@ -246,13 +245,13 @@ class FarmHelper {
     const list = this._getAllVoters(proposalId);
     list.forEach(who => {
       const action = this._getUserAction(proposalId, who);
-      const info = JSON.parse(blockchain.call(
-          this._getFarm(), "getUserTokenInfo", [who, this._getMain()])[0]);
-      if (info && info.amount) {
+      const amount = +blockchain.call(
+          this._getFarm(), "getUserTokenAmount", [who, JSON.stringify(XG_LIST)])[0] || 0;
+      if (amount > 0) {
         if (action * 1 > 0) {
-          stat.approval += info.amount * 1;
+          stat.approval += amount;
         } else {
-          stat.disapproval += info.amount * 1;
+          stat.disapproval += amount;
         }
       }
     });
@@ -267,17 +266,23 @@ class FarmHelper {
 
     TOKEN_WHITE_LIST.forEach(tokenObj => {
       const vote = this._getVote(tokenObj[0]);
-      const share = new BigNumber(vote).div(totalVote).times(10);
-      if (tokenObj[0] == 'xusd') {
-        blockchain.callWithAuth(this._getFarm(), "setPool", ['xusd', 'xusd', share.plus(tokenObj[2]).toFixed(0, ROUND_DOWN), '1']);
-      } else {
-        blockchain.callWithAuth(this._getFarm(), "setPool", [tokenObj[1], '', share.plus(tokenObj[2]).toFixed(0, ROUND_DOWN), '1']);
-      }
+      const share = Math.floor(vote * 20 / totalVote) / 2;
+      const extra = tokenObj[0] == "husd" ? "iost" : "";
+      blockchain.callWithAuth(this._getFarm(), "setPool", [tokenObj[1], extra, (share + tokenObj[2]).toFixed(1), '1']);
     });
   }
 
+  resetTotalVotes() {
+    var total = new BigNumber(0);
+    XG_LIST.forEach(token => {
+      const pool = JSON.parse(blockchain.call(this._getFarm(), "getPool", [token])[0]);
+      total = total.plus(pool.total);
+    });
+    this._setTotalVote(total.toFixed(6, ROUND_DOWN));
+  }
+
   deposit(token, amountStr) {
-    if (token != this._getMain()) {
+    if (XG_LIST.indexOf(token) < 0) {
       throw "Xigua: WRONG_TOKEN";
     }
 
@@ -293,7 +298,7 @@ class FarmHelper {
   }
 
   withdraw(token) {
-    if (token != this._getMain()) {
+    if (XG_LIST.indexOf(token) < 0) {
       throw "Xigua: WRONG_TOKEN";
     }
 
@@ -318,10 +323,10 @@ class FarmHelper {
 
     this._setUserToken(tx.publisher, token);
 
-    const info = JSON.parse(blockchain.call(
-      this._getFarm(), "getUserTokenInfo", [tx.publisher, this._getMain()])[0]);
-    if (info && new BigNumber(info.amount).gt(0)) {
-      this._addVote(token, info.amount);
+    const amountStr = blockchain.call(
+        this._getFarm(), "getUserTokenAmount", [tx.publisher, JSON.stringify(XG_LIST)])[0];
+    if (amountStr * 1 > 0) {
+      this._addVote(token, amountStr);
     }
   }
 
@@ -333,10 +338,10 @@ class FarmHelper {
 
     this._setUserToken(tx.publisher, "");
 
-    const info = JSON.parse(blockchain.call(
-        this._getFarm(), "getUserTokenInfo", [tx.publisher, this._getMain()])[0]);
-    if (info && new BigNumber(info.amount).gt(0)) {
-      this._minusVote(token, info.amount);
+    const amountStr = blockchain.call(
+        this._getFarm(), "getUserTokenAmount", [tx.publisher, JSON.stringify(XG_LIST)])[0];
+    if (amountStr * 1 > 0) {
+      this._minusVote(token, amountStr);
     }
   }
 }

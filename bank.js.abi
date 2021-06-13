@@ -169,6 +169,14 @@
             "description": ""
         },
         {
+            "name": "mintByAdmin",
+            "args": [
+                "string"
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
             "name": "startLiquidation",
             "args": [
                 "string"
@@ -192,6 +200,12 @@
             "args": [
                 "string"
             ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "withdrawIOST",
+            "args": [],
             "amountLimit": [],
             "description": ""
         },

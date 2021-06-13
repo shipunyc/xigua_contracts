@@ -45,6 +45,13 @@
             "description": ""
         },
         {
+            "name": "clear",
+            "args": [
+            ],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
             "name": "takeExtra",
             "args": [
                 "string"

@@ -45,6 +45,12 @@
             "description": ""
         },
         {
+            "name": "getNextLottery",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
             "name": "removeLiquidity",
             "args": [
                 "string",
@@ -54,10 +60,29 @@
             "description": ""
         },
         {
-            "name": "swapTokenToXGAndBurn",
-            "args": [
-                "string"
-            ],
+            "name": "maybeBurn",
+            "args": [],
+            "amountLimit": [{
+                "token": "iost",
+                "val": "unlimited"
+            }],
+            "description": ""
+        },
+        {
+            "name": "justBurn",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "swapToVost",
+            "args": [],
+            "amountLimit": [],
+            "description": ""
+        },
+        {
+            "name": "addLiquidity",
+            "args": [],
             "amountLimit": [],
             "description": ""
         }

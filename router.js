@@ -148,7 +148,8 @@ class Router {
     const liquidity = blockchain.call(
         this._getSwap(),
         "mint",
-        [tokenA, tokenB, amountA.toFixed(precisionA, ROUND_DOWN), amountB.toFixed(precisionB, ROUND_DOWN), toAddress])[0];
+        [tokenA, tokenB, amountA.toFixed(precisionA, ROUND_DOWN), amountB.toFixed(precisionB, ROUND_DOWN),
+         JSON.parse(blockchain.contextInfo()).caller.name, toAddress])[0];
 
     return [amountA.toFixed(precisionA, ROUND_DOWN), amountB.toFixed(precisionB, ROUND_DOWN), liquidity];
   }
@@ -160,7 +161,7 @@ class Router {
       amountBDesired,
       toAddress
   ) {
-    blockchain.call(this._getSwap(), "createPair", [tokenA, tokenB]);
+    blockchain.call(this._getSwap(), "createPair", [tokenA, tokenB, JSON.parse(blockchain.contextInfo()).caller.name]);
     if (new BigNumber(amountADesired).gt(0) && new BigNumber(amountBDesired).gt(0)) {
       return this.addLiquidity(tokenA, tokenB, amountADesired, amountBDesired, amountADesired, amountBDesired, toAddress);
     } else {

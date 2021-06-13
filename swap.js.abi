@@ -63,6 +63,7 @@
             "name": "createPair",
             "args": [
                 "string",
+                "string",
                 "string"
             ],
             "amountLimit": [{
@@ -74,6 +75,7 @@
         {
             "name": "mint",
             "args": [
+                "string",
                 "string",
                 "string",
                 "string",

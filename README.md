@@ -13,7 +13,6 @@ oracle:
 https://www.iostabc.com/contract/Contract31zSoLKV2hgYHA7z2hvnnzPEtQKmUrkAPKQ5tTmQcepw
 
 burner, collects revenues from other contracts and swap any tokens into XG and burn:
-
 https://www.iostabc.com/contract/Contract9kdRJheh9PXe69tbVYYfyZZAGrzeKGbZmi2wCGSbWg78
 
 extra, 90% of bank's vost dividends go here and swap into xusd:
@@ -23,4 +22,4 @@ farm:
 https://www.iostabc.com/contract/Contract4ZQsqLrDLUSFQRZoZRSxcdJhVaX6a6K7KbzotZRF6DoL
 
 farmHelper, wraps farm and allows user to vote:
-To be implemented.
+https://www.iostabc.com/contract/Contract7SFfJjR1phn27UdqxJoNBB5Cdx4UxsVuSrqRX2fAQNBP

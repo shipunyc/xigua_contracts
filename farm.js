@@ -27,6 +27,11 @@
   //   4. User's `rewardDebt` gets updated.
 }
 
+# lockMap
+[user] => {
+  [token] => [[day, amount], ...]
+}
+
 # tokenArray
 
 # totalAlloc
@@ -57,6 +62,8 @@ const ROUND_DOWN = 1;
 const PAD_PRECISION = 6;
 
 const TIME_LOCK_DURATION = 12 * 3600; // 12 hours
+
+const XG_LIST = ['xg_3', 'xg_30', 'xg_90', 'xg_180'];
 
 class Farm {
 
@@ -139,12 +146,89 @@ class Farm {
     return storage.get("extra") || '';
   }
 
+  _getToday() {
+    return Math.floor(tx.time / 1e9 / 3600 / 24);
+  }
+
+  _lock(who, token, amount, precision) {
+    const map = JSON.parse(storage.mapGet("lockMap", who) || "{}");
+    if (!map[token]) {
+      map[token] = [];
+    }
+
+    const today = this._getToday();
+    const last = map[token][map[token].length - 1];
+
+    if (last && last[0] == today) {
+      last[1] = new BigNumber(last[1]).plus(amount).toFixed(precision, ROUND_DOWN);
+    } else {
+      map[token].push([today, new BigNumber(amount).toFixed(precision, ROUND_DOWN)]);
+    }
+
+    storage.mapPut("lockMap", who, JSON.stringify(map));
+  }
+
+  _unlockInternal(who, token, amount, precision, today, days, willSave) {
+    const map = JSON.parse(storage.mapGet("lockMap", who) || "{}");
+    if (!map[token]) {
+      map[token] = [];
+    }
+
+    var remain = new BigNumber(amount);
+
+    while (map[token].length > 0 && remain.gt(0)) {
+      const head = map[token][0];
+
+      if (today < head[0] + days) {
+        break;
+      }
+
+      if (remain.gte(head[1])) {
+        remain = remain.minus(head[1]);
+        map[token].shift();
+      } else {
+        head[1] = new BigNumber(head[1]).minus(remain).toFixed(precision, ROUND_DOWN);
+        remain = new BigNumber(0);
+        break;
+      }
+    }
+
+    if (willSave) {
+      storage.mapPut("lockMap", who, JSON.stringify(map));
+    }
+
+    // The actually withdraw amount.
+    return new BigNumber(amount).minus(remain).toFixed(precision, ROUND_DOWN);
+  }
+
+  _unlock(who, token, amount, precision, days) {
+    const today = this._getToday();
+    return this._unlockInternal(who, token, amount, precision, today, days, true);
+  }
+
+  getCanUnlock(who, token, amount, precision, today, days) {
+    precision *= 1;
+    today *= 1;
+    days *= 1;
+    return this._unlockInternal(who, token, amount, precision, today, days, false);
+  }
+
   _getUserInfo(who) {
     return JSON.parse(storage.mapGet("userInfo", who) || "{}");
   }
 
-  getUserTokenInfo(who, token) {
-    return this._getUserInfo(who)[token] || null;
+  getUserTokenAmount(who, tokenList) {
+    tokenList = JSON.parse(tokenList);
+
+    var total = new BigNumber(0);
+    tokenList.forEach(token => {
+      if (this._getUserInfo(who)[token]) {
+        total = total.plus(this._getUserInfo(who)[token].amount);
+      }
+    });
+
+    // HACK: Currently we only care about xg.
+    return total.toFixed(6);
   }
 
   _setUserInfo(who, info) {
@@ -171,7 +255,7 @@ class Farm {
 
   _applyDeltaToTotalAlloc(delta) {
     var totalAlloc = this._getTotalAlloc();
-    totalAlloc += delta;
+    totalAlloc = (totalAlloc + delta).toFixed(1);
 
     if (totalAlloc < 0) {
       throw "Xigua: negative total alloc";
@@ -188,14 +272,25 @@ class Farm {
     return JSON.parse(storage.mapGet("pool", token) || "{}");
   }
 
+  getPool(token) {
+    return this._getPool(token);
+  }
+
   _checkPrecision(symbol) {
     return +storage.globalMapGet("token.iost", "TI" + symbol, "decimal") || 0;
   }
 
   addPool(token, extra, alloc, willUpdate) {
+    var symbol;
+    if (XG_LIST.indexOf(token) >= 0) {
+      symbol = "xg";
+    } else {
+      symbol = token;
+    }
+
     this._requireOwnerOrAddress(this._getFarmHelper());
 
-    alloc = Math.floor(+alloc || 0);
+    alloc = +alloc || 0;
     willUpdate = +willUpdate || 0;
 
     if (this._hasPool(token)) {
@@ -212,7 +307,7 @@ class Farm {
 
     storage.mapPut("pool", token, JSON.stringify({
       total: "0",
-      tokenPrecision: this._checkPrecision(token),
+      tokenPrecision: this._checkPrecision(symbol),
       extra: extra,
       extraPrecision: extra ? this._checkPrecision(extra) : 0,
       alloc: alloc,
@@ -223,9 +318,16 @@ class Farm {
   }
 
   setPool(token, extra, alloc, willUpdate) {
+    var symbol;
+    if (XG_LIST.indexOf(token) >= 0) {
+      symbol = "xg";
+    } else {
+      symbol = token;
+    }
+
     this._requireOwnerOrAddress(this._getFarmHelper());
 
-    alloc = Math.floor(+alloc || 0);
+    alloc = +alloc || 0;
     willUpdate = +willUpdate || 0;
 
     if (!this._hasPool(token)) {
@@ -237,6 +339,7 @@ class Farm {
     }
 
     const pool = this._getPool(token);
+    pool.tokenPrecision = this._checkPrecision(symbol);
     pool.extra = extra;
     pool.extraPrecision = extra ? this._checkPrecision(extra) : 0;
     this._applyDeltaToTotalAlloc(alloc - pool.alloc);
@@ -452,12 +555,23 @@ class Farm {
       userInfo[token].extraPending = userAmount.times(pool.accPerShareExtra).minus(userInfo[token].extraDebt).plus(userInfo[token].extraPending).toFixed(pool.extraPrecision, ROUND_DOWN);
     }
 
-    blockchain.callWithAuth("token.iost", "transfer",
+    if (XG_LIST.indexOf(token) >= 0) {
+      blockchain.callWithAuth("token.iost", "transfer",
+          ["xg",
+           tx.publisher,
+           blockchain.contractName(),
+           amountStr,
+           "deposit"]);
+
+      this._lock(tx.publisher, token, amountStr, XG_PRECISION);
+    } else {
+      blockchain.callWithAuth("token.iost", "transfer",
           [token,
            tx.publisher,
            blockchain.contractName(),
            amountStr,
            "deposit"]);
+    }
 
     userAmount = userAmount.plus(amountStr);
     userInfo[token].amount = userAmount.toFixed(pool.tokenPrecision, ROUND_DOWN);
@@ -507,33 +621,60 @@ class Farm {
     }
 
     if (new BigNumber(extraPendingStr).gt(0)) {
-      blockchain.callWithAuth("token.iost", "transfer",
-          [pool.extra,
-           blockchain.contractName(),
-           tx.publisher,
-           extraPendingStr,
-           "withdraw"]);
+      if (pool.extra) {
+        blockchain.callWithAuth("token.iost", "transfer",
+            [pool.extra,
+             blockchain.contractName(),
+             tx.publisher,
+             extraPendingStr,
+             "withdraw"]);
+      }
       userInfo[token].extraPending = "0";
     }
 
-    blockchain.callWithAuth("token.iost", "transfer",
+    var realAmountStr;
+
+    if (XG_LIST.indexOf(token) >= 0) {
+      const days = token.split("_")[1] * 1;
+      realAmountStr = this._unlock(tx.publisher, token, userAmountStr, XG_PRECISION, days);
+
+      if (new BigNumber(realAmountStr).lte(0)) {
+        throw "Xigua: no available balance";
+      }
+
+      blockchain.callWithAuth("token.iost", "transfer",
+          ["xg",
+           blockchain.contractName(),
+           tx.publisher,
+           realAmountStr,
+           "withdraw"]);
+    } else {
+      realAmountStr = userAmountStr;
+      blockchain.callWithAuth("token.iost", "transfer",
           [token,
            blockchain.contractName(),
            tx.publisher,
            userAmountStr,
-           "deposit"]);
+           "withdraw"]);
+    }
 
-    userInfo[token].amount = "0";
-    userInfo[token].rewardDebt = "0";
-    userInfo[token].extraDebt = "0";
+    const userRemainingAmount = userAmount.minus(realAmountStr);
+
+    if (userRemainingAmount.lt(0)) {
+      throw "Xigua: invalid remaining amount";
+    }
+
+    userInfo[token].amount = userRemainingAmount.toFixed(pool.tokenPrecision, ROUND_DOWN);
+    userInfo[token].rewardDebt = userRemainingAmount.times(pool.accPerShare).toFixed(XG_PRECISION, ROUND_DOWN);
+    userInfo[token].extraDebt = userRemainingAmount.times(pool.accPerShareExtra).toFixed(pool.extraPrecision, ROUND_DOWN);
     this._setUserInfo(tx.publisher, userInfo);
 
-    pool.total = new BigNumber(pool.total).minus(userAmount).toFixed(pool.tokenPrecision, ROUND_DOWN);
+    pool.total = new BigNumber(pool.total).minus(realAmountStr).toFixed(pool.tokenPrecision, ROUND_DOWN);
     this._setPoolObj(token, pool);
 
-    blockchain.receipt(JSON.stringify(["withdraw", token, pendingStr, extraPendingStr, userAmountStr]));
+    blockchain.receipt(JSON.stringify(["withdraw", token, pendingStr, extraPendingStr, realAmountStr]));
 
-    return userAmountStr;
+    return realAmountStr;
   }
 
   claim(token) {
@@ -571,12 +712,14 @@ class Farm {
     }
 
     if (new BigNumber(extraPendingStr).gt(0)) {
-      blockchain.callWithAuth("token.iost", "transfer",
-          [pool.extra,
-           blockchain.contractName(),
-           tx.publisher,
-           extraPendingStr,
-           "withdraw"]);
+      if (pool.extra) {
+        blockchain.callWithAuth("token.iost", "transfer",
+            [pool.extra,
+             blockchain.contractName(),
+             tx.publisher,
+             extraPendingStr,
+             "withdraw"]);
+      }
       userInfo[token].extraPending = "0";
     }
 

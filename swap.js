@@ -174,7 +174,15 @@ class Swap {
     return res;
   }
 
-  createPair(token0, token1) {
+  _getTokenContract(token) {
+    if (token == "husd") {
+      return "Contract3zCNX76rb3LkiAamGxCgBRCNn6C5fXJLaPPhZu2kagY3";
+    } else {
+      return "token.iost";
+    }
+  }
+
+  createPair(token0, token1, fromAddress) {
     if (token0 > token1) {
       let temp = token0;
       token0 = token1;
@@ -187,8 +195,8 @@ class Swap {
       throw "pair exists";
     }
 
-    const totalSupply0 = +blockchain.call("token.iost", "totalSupply", [token0])[0];
-    const totalSupply1 = +blockchain.call("token.iost", "totalSupply", [token1])[0];
+    const totalSupply0 = +blockchain.call(this._getTokenContract(token0), "totalSupply", [token0])[0];
+    const totalSupply1 = +blockchain.call(this._getTokenContract(token1), "totalSupply", [token1])[0];
     if (!totalSupply0 || !totalSupply1) {
       throw "invalid token";
     }
@@ -196,10 +204,12 @@ class Swap {
     const now = Math.floor(tx.time / 1e9);
 
     if (this._getFeeTo()) {
-      blockchain.transfer(tx.publisher,
-                          this._getFeeTo(),
-                          this._getListingFee(),
-                          "listing fee");
+      blockchain.callWithAuth("token.iost", "transfer",
+          ["xg",
+           fromAddress,
+           this._getFeeTo(),
+           this._getListingFee(),
+           "listing fee"]);
     }
 
     const xlpSymbol = "xlp" + tx.time.toString().substring(0, 13);
@@ -307,7 +317,7 @@ class Swap {
     return +storage.globalMapGet("token.iost", "TI" + symbol, "decimal") || 0;
   }
 
-  mint(tokenA, tokenB, amountA, amountB, toAddress) {
+  mint(tokenA, tokenB, amountA, amountB, fromAddress, toAddress) {
     const pair = this.getPair(tokenA, tokenB);
 
     if (!pair) {
@@ -321,17 +331,17 @@ class Swap {
       throw "Xigua: INVALID_INPUT";
     }
 
-    blockchain.callWithAuth("token.iost", "transfer",
+    blockchain.callWithAuth(this._getTokenContract(pair.token0), "transfer",
         [pair.token0,
-         tx.publisher,
+         fromAddress,
          blockchain.contractName(),
          amount0.toFixed(pair.precision0, ROUND_DOWN),
          "mint xlp"]);
     this._plusTokenBalance(pair.token0, amount0, pair.precision0);
 
-    blockchain.callWithAuth("token.iost", "transfer",
+    blockchain.callWithAuth(this._getTokenContract(pair.token1), "transfer",
         [pair.token1,
-         tx.publisher,
+         fromAddress,
          blockchain.contractName(),
          amount1.toFixed(pair.precision1, ROUND_DOWN),
          "mint xlp"]);
@@ -401,7 +411,7 @@ class Swap {
 
     this._burn(pair.xlp, fromAddress, liquidity);
 
-    blockchain.callWithAuth("token.iost", "transfer",
+    blockchain.callWithAuth(this._getTokenContract(pair.token0), "transfer",
         [pair.token0,
          blockchain.contractName(),
          toAddress,
@@ -409,7 +419,7 @@ class Swap {
          "burn xlp"]);
     this._minusTokenBalance(pair.token0, amount0, pair.precision0);
 
-    blockchain.callWithAuth("token.iost", "transfer",
+    blockchain.callWithAuth(this._getTokenContract(pair.token1), "transfer",
         [pair.token1,
          blockchain.contractName(),
          toAddress,
@@ -467,7 +477,7 @@ class Swap {
 
     if (amount0In.gt(0) && srcAddress != blockchain.contractName()) {
       // optimistically transfer tokens
-      blockchain.callWithAuth("token.iost", "transfer",
+      blockchain.callWithAuth(this._getTokenContract(pair.token0), "transfer",
           [pair.token0,
            srcAddress,
            blockchain.contractName(),
@@ -478,7 +488,7 @@ class Swap {
 
     if (amount1In.gt(0) && srcAddress != blockchain.contractName()) {
       // optimistically transfer tokens
-      blockchain.callWithAuth("token.iost", "transfer",
+      blockchain.callWithAuth(this._getTokenContract(pair.token1), "transfer",
           [pair.token1,
            srcAddress,
            blockchain.contractName(),
@@ -489,7 +499,7 @@ class Swap {
 
     if (amount0Out.gt(0) && dstAddress != blockchain.contractName()) {
       // optimistically transfer tokens
-      blockchain.callWithAuth("token.iost", "transfer",
+      blockchain.callWithAuth(this._getTokenContract(pair.token0), "transfer",
           [pair.token0,
            blockchain.contractName(),
            dstAddress,
@@ -500,7 +510,7 @@ class Swap {
 
     if (amount1Out.gt(0) && dstAddress != blockchain.contractName()) {
       // optimistically transfer tokens
-      blockchain.callWithAuth("token.iost", "transfer",
+      blockchain.callWithAuth(this._getTokenContract(pair.token1), "transfer",
           [pair.token1,
            blockchain.contractName(),
            dstAddress,
@@ -537,11 +547,11 @@ class Swap {
     for (let token in map) {
       const precision = this._checkPrecision(token);
       this._setTokenBalance(token, map[token], precision);
-      const realBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", [token, blockchain.contractName()])[0]);
+      const realBalance = new BigNumber(blockchain.call(this._getTokenContract(token), "balanceOf", [token, blockchain.contractName()])[0]);
       if (realBalance.gt(map[token])) {
         const precision = this._checkPrecision(token);
 
-        blockchain.callWithAuth("token.iost", "transfer",
+        blockchain.callWithAuth(this._getTokenContract(token), "transfer",
             [token,
              blockchain.contractName(),
              this._getFeeTo() || tx.publisher,
@@ -554,12 +564,12 @@ class Swap {
   // force one token balance to match reserves
   skim(token) {
     const balance = this._getTokenBalance(token);
-    const realBalance = new BigNumber(blockchain.call("token.iost", "balanceOf", [token, blockchain.contractName()])[0]);
+    const realBalance = new BigNumber(blockchain.call(this._getTokenContract(token), "balanceOf", [token, blockchain.contractName()])[0]);
 
     if (realBalance.gt(balance)) {
       const precision = this._checkPrecision(token);
 
-      blockchain.callWithAuth("token.iost", "transfer",
+      blockchain.callWithAuth(this._getTokenContract(token), "transfer",
           [token,
            blockchain.contractName(),
            this._getFeeTo() || tx.publisher,
